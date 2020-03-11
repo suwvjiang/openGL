@@ -24,17 +24,57 @@ GLubyte label[36] = { 'J', 'a', 'n',		'F', 'e', 'b',		'M', 'a', 'r',
 
 GLint dataValue[12] = { 420, 342, 324, 310, 262, 185, 190, 196, 217, 240, 312, 438 };
 
-struct screePt
+class screePt
 {
+private:
 	GLint x;
 	GLint y;
+
+public:
+	screePt()
+	{
+		x = y = 0;
+	}
+
+	void setCoords(GLint xValue, GLint yValue)
+	{
+		x = xValue;
+		y = yValue;
+	}
+
+	GLint getX() const
+	{
+		return x;
+	}
+
+	GLint getY()const
+	{
+		return y;
+	}
+
+	void incrementX()
+	{
+		x++;
+	}
+
+	void decrementY()
+	{
+		y--;
+	}
 };
+
+void setPixel(GLint x, GLint y)
+{
+	glBegin(GL_POINTS);
+	glVertex2i(x, y);
+	glEnd();
+}
 
 void lineSegment(screePt p1, screePt p2)
 {
 	glBegin(GL_LINES);
-	glVertex2i(p1.x, p1.y);
-	glVertex2i(p2.x, p2.y);
+	glVertex2i(p1.getX(), p1.getY());
+	glVertex2i(p2.getX(), p2.getY());
 	glEnd();
 }
 
@@ -171,16 +211,24 @@ GLuint drawCurve(GLint curveNum)
 
 	glColor3f(0.0f, 0.0f, 0.0f);
 
-	curvePt[0].x = x0;
-	curvePt[0].y = y0;
+	curvePt[0].setCoords(x0, y0);
 
 	switch (curveNum)
 	{
-	case limacon:	curvePt[0].x += a + b; break;
-	case cardioid:	curvePt[0].x += a + a; break;
-	case threeLeaf:	curvePt[0].x += a; break;
-	case fourLeaf:	curvePt[0].x += a; break;
-	case spiral: break;
+	case limacon:	
+		curvePt[0].setCoords(curvePt[0].getX()+ a + b, curvePt[0].getY());
+		break;
+	case cardioid:	
+		curvePt[0].setCoords(curvePt[0].getX() + a + a, curvePt[0].getY());
+		break;
+	case threeLeaf:	
+		curvePt[0].setCoords(curvePt[0].getX() + a, curvePt[0].getY());
+		break;
+	case fourLeaf:
+		curvePt[0].setCoords(curvePt[0].getX() + a, curvePt[0].getY());
+		break;
+	case spiral: 
+		break;
 	default:
 		break;
 	}
@@ -204,12 +252,10 @@ GLuint drawCurve(GLint curveNum)
 			break;
 		}
 
-		curvePt[1].x = x0 + r * cos(theta);
-		curvePt[1].y = y0 + r * sin(theta);
+		curvePt[1].setCoords(x0 + r * cos(theta), y0 + r * sin(theta));
 		lineSegment(curvePt[0], curvePt[1]);
 
-		curvePt[0].x = curvePt[1].x;
-		curvePt[0].y = curvePt[1].y;
+		curvePt[0].setCoords(curvePt[1].getX(), curvePt[1].getY());
 		theta += dtheta;
 	}
 
@@ -221,10 +267,244 @@ void initDrawList()
 {
 	for (int i = 1; i < 6; ++i)
 	{
-		GLuint regHex = drawCurve(i);
-
+		drawCurve(i);
 	}
 }
+
+void drawColorTriangles()
+{
+	glShadeModel(GL_SMOOTH);//GL_SMOOTH-平滑插值，GL_FLAT-单色填充
+	glPolygonMode(GL_FRONT, GL_FILL);//GL_LINE-显示边框，GL_POINT-显示顶点，GL_FILL-默认填充显示
+	glEnable(GL_LINE_SMOOTH);
+
+	glBegin(GL_TRIANGLES);
+	glColor3f(.0f, .0f, 1.f);
+	glVertex2i(50, 50);
+	glColor3f(.0f, 1.f, .0f);
+	glVertex2i(250, 50);
+	glColor3f(1.f, .0f, .0f);
+	glVertex2i(150, 250);
+	glEnd();
+}
+
+inline int roundPlus(const float a) { return int(a + 0.5f); }
+
+void lineDDA(int x0, int y0, int xEnd, int yEnd)
+{
+	int dx = xEnd - x0;
+	int dy = yEnd - y0;
+	int steps, k;
+
+	float xIncrement, yIncrement, x = x0, y = y0;
+
+	if (abs(dy) > abs(dy))
+	{
+		steps = dx;
+	} 
+	else
+	{
+		steps = dy;
+	}
+
+	xIncrement = dx / steps;
+	yIncrement = dy / steps;
+
+	setPixel(roundPlus(x), roundPlus(y));
+	for (k = 0; k < steps; ++k)
+	{
+		x = x0 + xIncrement * k;
+		y = y0 + yIncrement * k;
+		setPixel(roundPlus(x), roundPlus(y));
+	}
+}
+
+void lineBres(int x0, int y0, int xEnd, int yEnd)
+{
+	int dx = abs(xEnd - x0);
+	int dy = abs(yEnd - y0);
+	int dy2 = 2 * dy;
+	int a = 2 * (dy - dx);
+	int p = dy2 - dx;
+	int x, y;
+
+	if (x0 > xEnd)
+	{
+		x = xEnd;
+		y = yEnd;
+	} 
+	else
+	{
+		x = x0;
+		y = y0;
+	}
+
+	setPixel(x, y);
+	for (int k = 0; k < dx; ++k)
+	{
+		x += 1;
+		if (p < 0)
+		{
+			p = p + dy2;
+		}
+		else
+		{
+			y += 1;
+			p = p + a;
+		}
+		setPixel(x, y);
+	}
+}
+
+//中点法画圆
+void circlePlotPoints(GLint x, GLint y, screePt point)
+{
+	setPixel(x + point.getX(), y + point.getY());
+	setPixel(x + point.getX(), y - point.getY());
+	setPixel(x - point.getX(), y + point.getY());
+	setPixel(x - point.getX(), y - point.getY());
+	setPixel(x + point.getY(), y + point.getX());
+	setPixel(x + point.getY(), y - point.getX());
+	setPixel(x - point.getY(), y + point.getX());
+	setPixel(x - point.getY(), y - point.getX());
+}
+void circleMidPoint(GLint x, GLint y, GLint radius)
+{
+	screePt circPt;
+	GLint p = 1 - radius;
+	circPt.setCoords(0, radius);
+	circlePlotPoints(x, y, circPt);
+
+	while (circPt.getX() < circPt.getY())
+	{
+		circPt.incrementX();
+
+		if (p < 0)
+		{
+			p += 2 * circPt.getX() + 1;
+		} 
+		else
+		{
+			circPt.decrementY();
+			p += 2 * circPt.getX() - 2 * circPt.getY() + 1;
+		}
+
+		circlePlotPoints(x, y, circPt);
+	}
+}
+
+//中点画椭圆
+void ellipsePlotPoints(GLint xCenter, GLint yCenter, GLint x, GLint y)
+{
+	setPixel(xCenter + x, yCenter + y);
+	setPixel(xCenter + x, yCenter - y);
+	setPixel(xCenter - x, yCenter + y);
+	setPixel(xCenter - x, yCenter - y);
+}
+
+void ellipseMidPoint(GLint xCenter, GLint yCenter, GLint xRadius, GLint yRadius)
+{
+	const int Rx2 = xRadius * xRadius;
+	const int Ry2 = yRadius * yRadius;
+	const int tRx2 = 2 * Rx2;
+	const int tRy2 = 2 * Ry2;
+
+	int p = 0;
+	int x = 0;
+	int y = yRadius;
+	int px = 0;
+	int py = tRx2 * y;
+
+	ellipsePlotPoints(xCenter, yCenter, x, y);
+
+	p = roundPlus(Ry2 - (Rx2 * yRadius) + (0.25f * Rx2));
+	while (px < py)
+	{
+		x++;
+		px += tRy2;
+		if (p < 0)
+		{
+			p += Ry2 + px;
+		} 
+		else
+		{
+			y--;
+			py -= tRx2;
+			p += Ry2 + px - py;
+		}
+		ellipsePlotPoints(xCenter, yCenter, x, y);
+	}
+
+	p = roundPlus(Ry2 * (x + 0.5) * (x + 0.5) + Rx2 * (y - 1) * (y - 1) - Rx2 * Ry2);
+	while (y>0)
+	{
+		y--;
+		py -= tRx2;
+		if (p > 0)
+		{
+			p += Rx2 - py;
+		}
+		else
+		{
+			x++;
+			px += tRy2;
+			p += Rx2 - py + px;
+		}
+		ellipsePlotPoints(xCenter, yCenter, x, y);
+	}
+}
+
+void midPointGravity(GLint vx0, GLint vy0, GLint x0, GLint y0)
+{
+	const int gravity = 980;
+	const int vxy = vx0 * vy0;
+	const int gx = gravity * (x0 - 0.5f);
+	const int vxt = vx0 * vx0;
+	const int xEnd = (vxy / gravity) + x0;
+
+	int x = x0, y = y0;
+	int xg = x * gravity;
+	setPixel(x, y);
+	setPixel(xEnd + xEnd - x, y);
+
+	int temp = roundPlus((vy0 * vy0 - vx0 * vx0) / (2 * gravity)) + y0;
+	int p = vxt + 0.125 * gravity - 0.5 * vxy;
+	while (y < temp)
+	{
+		y++;
+		if (p>0)
+		{
+			x++;
+			xg += gravity;
+			p += vxt + xg - gx - gravity - vxy;
+		} 
+		else
+		{
+			p += vxt;
+		}
+
+		setPixel(x, y);
+		setPixel(xEnd + xEnd - x, y);
+	}
+	
+	p = (0.5f + y - y0) * vxt - vxy * (x + 1 - x0) + 0.5f * gravity * (x + 1 - x0) * (x + 1 - x0);
+	while (x < xEnd)
+	{
+		x++;
+		xg += gravity;
+		if (p < 0)
+		{
+			y++;
+			p += xg - gx - vxy + vxt;
+		}
+		else
+		{
+			p += xg - gx - vxy;
+		}
+		setPixel(x, y);
+		setPixel(xEnd + xEnd - x, y);
+	}
+}
+
 void inputDisplayFunc(void)
 {
 	GLuint curveNum;
@@ -247,14 +527,19 @@ void inputDisplayFunc(void)
 void drawFunc(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT);
-	glColor3f(0.6f, 0.4f, 0.2f);//设定显示对象的颜色
+	glColor3f(0.0f, 0.4f, 0.2f);//设定显示对象的颜色
 
 	//lineSegment();
 	//cube();
 	//cubeElements();
 	//callList();
 	//lineGraph();
-	barChart();
+	//barChart();
+	//drawColorTriangles();
+	//lineBres(20, 10, 330, 218);
+	//circleMidPoint(200, 200, 100);
+	//ellipseMidPoint(200, 200, 100, 50);
+	midPointGravity(200, 800, 40, 40);
 
 	glFlush();
 }
@@ -273,7 +558,7 @@ void winReshapeFunc(int newWidth, int newHeight)
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	gluOrtho2D(0, (GLdouble)newWidth, 0, (GLdouble)newHeight);
-	//glViewport(0, 0, newWidth, newHeight);
+	glViewport(0, 0, newWidth, newHeight);
 
 	glClear(GL_COLOR_BUFFER_BIT);
 }
@@ -281,7 +566,7 @@ void winReshapeFunc(int newWidth, int newHeight)
 int main(int argc, char** argv) {
 	glutInit(&argc, argv);//初始化
 
-	glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);//设定窗口的缓存和颜色模型
+	glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);//设定窗口的缓存和颜色模型, GLUT_RGB-颜色编码，GLUT_INDEX-颜色表
 
 	glutInitWindowPosition(100, 100);//设定窗口位置
 
@@ -291,7 +576,8 @@ int main(int argc, char** argv) {
 
 	init();
 	initDrawList();
-	glutDisplayFunc(inputDisplayFunc);//指定显示内容
+	//glutDisplayFunc(inputDisplayFunc);//指定显示内容
+	glutDisplayFunc(drawFunc);//
 	glutReshapeFunc(winReshapeFunc);//显示窗口重定形
 	glutMainLoop();
 	return 0;
