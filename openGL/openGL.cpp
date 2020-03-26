@@ -14,6 +14,8 @@ using namespace std;
 //#pragma comment(lib, "glew32.lib")
 
 const double TWO_PI = 6.2831853;
+const double PI = 3.1415926;
+
 GLsizei winWidth = 600, winHeight = 500;
 GLint xRaster = 25, yRaster = 100;
 GLubyte label[36] = { 'J', 'a', 'n',		'F', 'e', 'b',		'M', 'a', 'r',
@@ -23,6 +25,12 @@ GLubyte label[36] = { 'J', 'a', 'n',		'F', 'e', 'b',		'M', 'a', 'r',
 };
 
 GLint dataValue[12] = { 420, 342, 324, 310, 262, 185, 190, 196, 217, 240, 312, 438 };
+
+GLfloat xwcMin = 0.0, xwcMax = 225.0;
+GLfloat ywcMin = 0.0, ywcMax = 225.0;
+
+typedef GLfloat Matrix3x3[3][3];
+Matrix3x3 matComposite;
 
 class screePt
 {
@@ -63,12 +71,136 @@ public:
 	}
 };
 
+class wcPt2D
+{	
+public:
+	GLfloat x, y;
+	wcPt2D() { x = y = 0.0; }
+	void setCoords(GLfloat vx, GLfloat vy) { x = vx; y = vy; }
+};
+
+inline int roundPlus(const float a) { return int(a + 0.5f); }
+
 void setPixel(GLint x, GLint y)
 {
 	glBegin(GL_POINTS);
 	glVertex2i(x, y);
 	glEnd();
 }
+
+void triangle(wcPt2D* verts)
+{
+	GLint k;
+
+	glBegin(GL_TRIANGLES);
+	for (k = 0; k < 3; ++k)
+	{
+		glVertex2f(verts[k].x, verts[k].y);
+	}
+	glEnd();
+}
+
+void swapPts(wcPt2D* p1, wcPt2D* p2)
+{
+	wcPt2D temp;
+	temp = *p1;
+	*p1 = *p2;
+	*p2 = temp;
+}
+
+#pragma region Matrix3x3
+
+//
+void matrix3x3SetIdentity(Matrix3x3 matIdent3x3)
+{
+	GLint row, col;
+	for (row = 0; row < 3; ++row)
+	{
+		for (col = 0; col < 3; ++col)
+		{
+			matIdent3x3[row][col] = (row == col);
+		}
+	}
+}
+
+void matrix3x3PreMultiply(Matrix3x3 m1, Matrix3x3 m2)
+{
+	GLint row, col;
+	Matrix3x3 matTemp;
+	for (row = 0; row<3;++row)
+	{
+		for (col = 0; col < 3; ++col)
+		{
+			matTemp[row][col] = m1[row][0] * m2[0][col] + m1[row][1] * m2[1][col] + m1[row][2] * m2[2][col];
+		}
+	}
+
+	for (row = 0; row < 3; ++row)
+	{
+		for (col = 0; col < 3; ++col)
+		{
+			m2[row][col] = matTemp[row][col];
+		}
+	}
+}
+
+void translate2D(GLfloat tx, GLfloat ty)
+{
+	Matrix3x3 matTrans;
+	matrix3x3SetIdentity(matTrans);
+
+	matTrans[0][2] = tx;
+	matTrans[1][2] = ty;
+
+	matrix3x3PreMultiply(matTrans, matComposite);
+}
+
+void rotate2D(wcPt2D pivotPt, GLfloat theta)
+{
+	Matrix3x3 matRot;
+	matrix3x3SetIdentity(matRot);
+
+	matRot[0][0] = cos(theta);
+	matRot[0][1] = -sin(theta);
+	matRot[0][2] = pivotPt.x * (1 - cos(theta)) + pivotPt.y * sin(theta);
+
+	matRot[1][0] = sin(theta);
+	matRot[1][1] = cos(theta);
+	matRot[1][2] = pivotPt.y * (1 - cos(theta)) - pivotPt.x * sin(theta);
+
+	matrix3x3PreMultiply(matRot, matComposite);
+}
+
+void scale2D(GLfloat sx, GLfloat sy, wcPt2D fixedPt)
+{
+	Matrix3x3 matScale;
+	matrix3x3SetIdentity(matScale);
+
+	matScale[0][0] = sx;
+	matScale[0][2] = (1 - sx) * fixedPt.x;
+
+	matScale[1][1] = sy;
+	matScale[1][2] = (1 - sy) * fixedPt.y;
+
+	matrix3x3PreMultiply(matScale, matComposite);
+}
+
+void transformVerts2D(GLint nVerts, wcPt2D* verts)
+{
+	GLint k;
+	GLfloat temp;
+
+	for (k = 0; k < nVerts; ++k)
+	{
+		temp = matComposite[0][0] * verts[k].x + matComposite[0][1] * verts[k].y + matComposite[0][2];
+		verts[k].y = matComposite[1][0] * verts[k].x + matComposite[1][1] * verts[k].y + matComposite[1][2];
+		verts[k].x = temp;
+	}
+}
+
+#pragma endregion
+
+#pragma region Draw Sampler
 
 void lineSegment(screePt p1, screePt p2)
 {
@@ -138,7 +270,7 @@ void lineGraph()
 
 	glColor3f(0.0f, 0.0f, 1.0f);
 	glBegin(GL_LINE_STRIP);
-	for (k = 0; k <12;k++)
+	for (k = 0; k < 12; k++)
 	{
 		glVertex2i(x + k * 50, dataValue[k]);
 	}
@@ -157,7 +289,7 @@ void lineGraph()
 	for (month = 0; month < 12; month++)
 	{
 		glRasterPos2i(xRaster, yRaster);
-		for (k = 3*month; k < 3*month+ 3; k++)
+		for (k = 3 * month; k < 3 * month + 3; k++)
 		{
 			glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, label[k]);
 		}
@@ -188,7 +320,7 @@ void barChart()
 	}
 }
 
-typedef enum 
+typedef enum
 {
 	limacon = 1,
 	cardioid,
@@ -215,19 +347,19 @@ GLuint drawCurve(GLint curveNum)
 
 	switch (curveNum)
 	{
-	case limacon:	
-		curvePt[0].setCoords(curvePt[0].getX()+ a + b, curvePt[0].getY());
+	case limacon:
+		curvePt[0].setCoords(curvePt[0].getX() + a + b, curvePt[0].getY());
 		break;
-	case cardioid:	
+	case cardioid:
 		curvePt[0].setCoords(curvePt[0].getX() + a + a, curvePt[0].getY());
 		break;
-	case threeLeaf:	
+	case threeLeaf:
 		curvePt[0].setCoords(curvePt[0].getX() + a, curvePt[0].getY());
 		break;
 	case fourLeaf:
 		curvePt[0].setCoords(curvePt[0].getX() + a, curvePt[0].getY());
 		break;
-	case spiral: 
+	case spiral:
 		break;
 	default:
 		break;
@@ -287,8 +419,6 @@ void drawColorTriangles()
 	glEnd();
 }
 
-inline int roundPlus(const float a) { return int(a + 0.5f); }
-
 void lineDDA(int x0, int y0, int xEnd, int yEnd)
 {
 	int dx = xEnd - x0;
@@ -300,7 +430,7 @@ void lineDDA(int x0, int y0, int xEnd, int yEnd)
 	if (abs(dy) > abs(dy))
 	{
 		steps = dx;
-	} 
+	}
 	else
 	{
 		steps = dy;
@@ -331,7 +461,7 @@ void lineBres(int x0, int y0, int xEnd, int yEnd)
 	{
 		x = xEnd;
 		y = yEnd;
-	} 
+	}
 	else
 	{
 		x = x0;
@@ -381,7 +511,7 @@ void circleMidPoint(GLint x, GLint y, GLint radius)
 		if (p < 0)
 		{
 			p += 2 * circPt.getX() + 1;
-		} 
+		}
 		else
 		{
 			circPt.decrementY();
@@ -400,7 +530,6 @@ void ellipsePlotPoints(GLint xCenter, GLint yCenter, GLint x, GLint y)
 	setPixel(xCenter - x, yCenter + y);
 	setPixel(xCenter - x, yCenter - y);
 }
-
 void ellipseMidPoint(GLint xCenter, GLint yCenter, GLint xRadius, GLint yRadius)
 {
 	const int Rx2 = xRadius * xRadius;
@@ -424,7 +553,7 @@ void ellipseMidPoint(GLint xCenter, GLint yCenter, GLint xRadius, GLint yRadius)
 		if (p < 0)
 		{
 			p += Ry2 + px;
-		} 
+		}
 		else
 		{
 			y--;
@@ -435,7 +564,7 @@ void ellipseMidPoint(GLint xCenter, GLint yCenter, GLint xRadius, GLint yRadius)
 	}
 
 	p = roundPlus(Ry2 * (x + 0.5) * (x + 0.5) + Rx2 * (y - 1) * (y - 1) - Rx2 * Ry2);
-	while (y>0)
+	while (y > 0)
 	{
 		y--;
 		py -= tRx2;
@@ -453,6 +582,7 @@ void ellipseMidPoint(GLint xCenter, GLint yCenter, GLint xRadius, GLint yRadius)
 	}
 }
 
+//中点抛物线
 void midPointGravity(GLint vx0, GLint vy0, GLint x0, GLint y0)
 {
 	const int gravity = 980;
@@ -466,17 +596,17 @@ void midPointGravity(GLint vx0, GLint vy0, GLint x0, GLint y0)
 	setPixel(x, y);
 	setPixel(xEnd + xEnd - x, y);
 
-	int temp = roundPlus((vy0 * vy0 - vx0 * vx0) / (2 * gravity)) + y0;
+	int temp = roundPlus((vy0 * vy0 - vxt) / (2 * gravity)) + y0;
 	int p = vxt + 0.125 * gravity - 0.5 * vxy;
 	while (y < temp)
 	{
 		y++;
-		if (p>0)
+		if (p > 0)
 		{
 			x++;
 			xg += gravity;
 			p += vxt + xg - gx - gravity - vxy;
-		} 
+		}
 		else
 		{
 			p += vxt;
@@ -485,7 +615,7 @@ void midPointGravity(GLint vx0, GLint vy0, GLint x0, GLint y0)
 		setPixel(x, y);
 		setPixel(xEnd + xEnd - x, y);
 	}
-	
+
 	p = (0.5f + y - y0) * vxt - vxy * (x + 1 - x0) + 0.5f * gravity * (x + 1 - x0) * (x + 1 - x0);
 	while (x < xEnd)
 	{
@@ -504,6 +634,204 @@ void midPointGravity(GLint vx0, GLint vy0, GLint x0, GLint y0)
 		setPixel(xEnd + xEnd - x, y);
 	}
 }
+
+#pragma endregion
+
+#pragma region 2D Clip
+
+const GLint winLeftBitCode = 0x1;
+const GLint winRightBitCode = 0x2;
+const GLint winBottomBitCode = 0x4;
+const GLint winTopBitCode = 0x8;
+
+inline GLint inside(GLint code) { return GLint(!code); }//取反
+inline GLint reject(GLint code1, GLint code2) { return GLint(code1 & code2); }//且
+inline GLint accept(GLint code1, GLint code2) { return GLint(!(code1 | code2)); }//异或
+
+GLubyte encode(wcPt2D pt, wcPt2D winMin, wcPt2D winMax)
+{
+	GLubyte code = 0x00;
+	if (pt.x < winMin.x)
+		code = code | winLeftBitCode;
+	if (pt.x > winMax.x)
+		code |= winRightBitCode;
+	if (pt.y < winMin.y)
+		code |= winBottomBitCode;
+	if (pt.y > winMax.y)
+		code |= winTopBitCode;
+	return code;
+}
+
+void swapCodes(GLubyte* c1, GLubyte* c2)
+{
+	GLubyte temp;
+	temp = *c1;
+	*c1 = *c2;
+	*c2 = temp;
+}
+
+void lineClipCohSuth(wcPt2D winMin, wcPt2D winMax, wcPt2D p1, wcPt2D p2)
+{
+	GLubyte code1, code2;
+	GLint done = false, plotLine = false;
+
+	GLfloat m;
+
+	while (!done)
+	{
+		code1 = encode(p1, winMin, winMax);
+		code2 = encode(p2, winMin, winMax);
+
+		if (accept(code1, code2))
+		{
+			done = true;
+			plotLine = true;
+		}
+		else
+		{
+			if (reject(code1, code2))//同侧剔除
+			{
+				done = true;
+			}
+			else
+			{
+				if (inside(code1))
+				{
+					swapPts(&p1, &p2);
+					swapCodes(&code1, &code2);
+				}
+
+				if (p2.x != p1.x)
+					m = (p2.y - p1.y) / (p2.x - p1.x);
+				if (code1 & winLeftBitCode)
+				{
+					p1.y += (winMin.x - p1.x) * m;
+					p1.x = winMin.x;
+				}
+				else
+				{
+					if (code1 & winRightBitCode)
+					{
+						p1.y += (winMax.x - p1.x) * m;
+						p1.x = winMax.x;
+					}
+					else
+					{
+						if (code1 & winBottomBitCode)
+						{
+							if (p2.x != p1.x)
+								p1.x += (winMin.y - p1.y) / m;
+							p1.y = winMin.y;
+						}
+						else
+						{
+							if (code1 & winTopBitCode)
+							{
+								if (p2.x != p1.x)
+									p1.x += (winMax.y - p1.y) / m;
+								p1.y = winMax.y;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if (plotLine)
+		lineBres(roundPlus(p1.x), roundPlus(p1.y), roundPlus(p2.x), roundPlus(p2.y));
+}
+
+GLint clipTest(GLfloat p, GLfloat q, GLfloat* uIn, GLfloat* uOut)
+{
+	GLfloat r;
+	GLint returnValue = true;
+
+	if (p < .0)//入边
+	{
+		r = q / p;
+		if (r > *uOut)
+			returnValue = false;
+		else
+		{
+			if (r > *uIn)
+				*uIn = r;
+		}
+	}
+	else
+	{
+		if (p > .0)//出边
+		{
+			r = q / p;
+			if (r < *uIn)
+				returnValue = false;
+			else
+			{
+				if (r < *uOut)
+					*uOut = r;
+			}
+		}
+		else//与边界平等
+			if (q < .0)
+				returnValue = false;
+	}
+}
+
+void lineClipLiangBarsk(wcPt2D winMin, wcPt2D winMax, wcPt2D p1, wcPt2D p2)
+{
+	GLfloat uIn = 0, uOut = 1, dx = p2.x - p1.x, dy;
+	if (clipTest(-dx, p1.x - winMin.x, &uIn, &uOut))
+	{
+		if (clipTest(dx, winMax.x - p1.x, &uIn, &uOut))
+		{
+			dy = p2.y - p1.y;
+			if (clipTest(-dy, p1.y - winMin.y, &uIn, &uOut))
+			{
+				if (clipTest(dy, winMax.y - p1.y, &uIn, &uOut))
+				{
+					if (uOut < 1.0)
+						p2.setCoords(p1.x + uOut * dx, p1.y + uOut * dy);
+					if (uIn > .0)
+						p1.setCoords(p1.x + uIn * dx, p1.y + uIn * dy);
+
+					lineBres(roundPlus(p1.x), roundPlus(p1.y), roundPlus(p2.x), roundPlus(p2.y));
+				}
+			}
+		}
+	}
+}
+#pragma endregion
+
+void drawFunc(void)
+{
+	glClear(GL_COLOR_BUFFER_BIT);
+	glColor3f(0.0f, 0.4f, 0.2f);//设定显示对象的颜色
+
+	//lineSegment();
+	//cube();
+	//cubeElements();
+	//callList();
+	//lineGraph();
+	//barChart();
+	//drawColorTriangles();
+	//lineBres(20, 10, 330, 218);
+	//circleMidPoint(200, 200, 100);
+	//ellipseMidPoint(200, 200, 100, 50);
+	//midPointGravity(200, 800, 40, 40);
+
+	wcPt2D winMin;
+	winMin.x = 0; winMin.y = 0;
+	wcPt2D winMax;
+	winMax.x = 100; winMax.y = 100;
+
+	wcPt2D p1, p2;
+	p1.x = -50; p1.y = -50;
+	p2.x = 120, p2.y = 120;
+	lineClipCohSuth(winMin, winMax, p1, p2);
+
+	glFlush();
+}
+
 
 void inputDisplayFunc(void)
 {
@@ -524,22 +852,45 @@ void inputDisplayFunc(void)
 	glFlush();
 }
 
-void drawFunc(void)
+void matrixDisplayFunc()
 {
-	glClear(GL_COLOR_BUFFER_BIT);
-	glColor3f(0.0f, 0.4f, 0.2f);//设定显示对象的颜色
+	GLint nVerts = 3;
+	wcPt2D verts[3] = { {-50.0, -50.0}, {-150.0, -50.0}, {-100.0, 50.0} };
 
-	//lineSegment();
-	//cube();
-	//cubeElements();
-	//callList();
-	//lineGraph();
-	//barChart();
-	//drawColorTriangles();
-	//lineBres(20, 10, 330, 218);
-	//circleMidPoint(200, 200, 100);
-	//ellipseMidPoint(200, 200, 100, 50);
-	midPointGravity(200, 800, 40, 40);
+	wcPt2D centriodPt;
+
+	GLint k, xSum = 0, ySum = 0;
+
+	for (k = 0; k < nVerts; ++k)
+	{
+		xSum += verts[k].x;
+		ySum += verts[k].y;
+	}
+
+	centriodPt.x = GLfloat(xSum) / GLfloat(nVerts);
+	centriodPt.y = GLfloat(ySum) / GLfloat(nVerts);
+
+	wcPt2D pivPt, fixedPt;
+	pivPt = centriodPt;
+	fixedPt = centriodPt;
+
+	GLfloat tx = 200.0, ty = 0.0;
+	GLfloat sx = 1, sy = 1;
+	GLdouble theta = PI / 2.0;
+
+	glClear(GL_COLOR_BUFFER_BIT);
+	glColor3f(0.0f, 0.0f, 1.0f);//设定显示对象的颜色
+	triangle(verts);
+
+	matrix3x3SetIdentity(matComposite);
+	scale2D(sx, sy, fixedPt);
+	rotate2D(pivPt, theta);
+	translate2D(tx, ty);
+
+	transformVerts2D(nVerts, verts);
+
+	glColor3f(1.0, .0, .0);
+	triangle(verts);
 
 	glFlush();
 }
@@ -550,15 +901,14 @@ void init(void)
 
 	glMatrixMode(GL_PROJECTION);//设定投影模式
 	glLoadIdentity();
-	gluOrtho2D(0.0, 400.0, 0, 400.0);
+	gluOrtho2D(-200.0, 200.0, -200.0, 200.0);
 }
 
 void winReshapeFunc(int newWidth, int newHeight)
 {
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluOrtho2D(0, (GLdouble)newWidth, 0, (GLdouble)newHeight);
-	glViewport(0, 0, newWidth, newHeight);
+	gluOrtho2D(newWidth*-0.5, (GLdouble)newWidth * 0.5, (GLdouble)newHeight*-0.5, (GLdouble)newHeight*0.5);
 
 	glClear(GL_COLOR_BUFFER_BIT);
 }
@@ -576,8 +926,9 @@ int main(int argc, char** argv) {
 
 	init();
 	initDrawList();
+	glutDisplayFunc(drawFunc);
 	//glutDisplayFunc(inputDisplayFunc);//指定显示内容
-	glutDisplayFunc(drawFunc);//
+	//glutDisplayFunc(matrixDisplayFunc);//
 	glutReshapeFunc(winReshapeFunc);//显示窗口重定形
 	glutMainLoop();
 	return 0;
