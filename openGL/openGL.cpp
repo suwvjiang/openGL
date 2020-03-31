@@ -77,6 +77,10 @@ public:
 	GLfloat x, y;
 	wcPt2D() { x = y = 0.0; }
 	void setCoords(GLfloat vx, GLfloat vy) { x = vx; y = vy; }
+	~wcPt2D() 
+	{ 
+		cout << "destroy wcpt2D'x:" << x << " y:" << y << endl;
+	}
 };
 
 inline int roundPlus(const float a) { return int(a + 0.5f); }
@@ -88,12 +92,13 @@ void setPixel(GLint x, GLint y)
 	glEnd();
 }
 
-void triangle(wcPt2D* verts)
+void triangle(wcPt2D* verts, GLint nVerts)
 {
 	GLint k;
 
-	glBegin(GL_TRIANGLES);
-	for (k = 0; k < 3; ++k)
+	glPolygonMode(GL_FRONT, GL_FILL);
+	glBegin(GL_POLYGON);
+	for (k = 0; k < nVerts; ++k)
 	{
 		glVertex2f(verts[k].x, verts[k].y);
 	}
@@ -427,7 +432,7 @@ void lineDDA(int x0, int y0, int xEnd, int yEnd)
 
 	float xIncrement, yIncrement, x = x0, y = y0;
 
-	if (abs(dy) > abs(dy))
+	if (abs(dx) > abs(dy))
 	{
 		steps = dx;
 	}
@@ -648,7 +653,7 @@ inline GLint inside(GLint code) { return GLint(!code); }//取反
 inline GLint reject(GLint code1, GLint code2) { return GLint(code1 & code2); }//且
 inline GLint accept(GLint code1, GLint code2) { return GLint(!(code1 | code2)); }//异或
 
-GLubyte encode(wcPt2D pt, wcPt2D winMin, wcPt2D winMax)
+GLubyte encode(wcPt2D& pt, wcPt2D& winMin, wcPt2D& winMax)
 {
 	GLubyte code = 0x00;
 	if (pt.x < winMin.x)
@@ -670,7 +675,7 @@ void swapCodes(GLubyte* c1, GLubyte* c2)
 	*c2 = temp;
 }
 
-void lineClipCohSuth(wcPt2D winMin, wcPt2D winMax, wcPt2D p1, wcPt2D p2)
+void lineClipCohSuth(wcPt2D& winMin, wcPt2D& winMax, wcPt2D& p1, wcPt2D& p2)
 {
 	GLubyte code1, code2;
 	GLint done = false, plotLine = false;
@@ -775,9 +780,10 @@ GLint clipTest(GLfloat p, GLfloat q, GLfloat* uIn, GLfloat* uOut)
 			if (q < .0)
 				returnValue = false;
 	}
+	return returnValue;
 }
 
-void lineClipLiangBarsk(wcPt2D winMin, wcPt2D winMax, wcPt2D p1, wcPt2D p2)
+void lineClipLiangBarsk(wcPt2D& winMin, wcPt2D& winMax, wcPt2D& p1, wcPt2D& p2)
 {
 	GLfloat uIn = 0, uOut = 1, dx = p2.x - p1.x, dy;
 	if (clipTest(-dx, p1.x - winMin.x, &uIn, &uOut))
@@ -800,6 +806,189 @@ void lineClipLiangBarsk(wcPt2D winMin, wcPt2D winMax, wcPt2D p1, wcPt2D p2)
 		}
 	}
 }
+
+void testLineClip()
+{
+	wcPt2D winMin;
+	winMin.x = 0; winMin.y = 0;
+	wcPt2D winMax;
+	winMax.x = 100; winMax.y = 100;
+
+	wcPt2D p1, p2;
+	p1.x = -50; p1.y = -50;
+	p2.x = 120, p2.y = 120;
+	lineClipCohSuth(winMin, winMax, p1, p2);
+}
+
+typedef enum Boundary
+{
+	Left,
+	Right,
+	Bottom,
+	Top,
+};
+const GLint nClip = 4;
+
+//是否在边界区域内
+GLint inside(wcPt2D& p, Boundary edeg, wcPt2D& winMin, wcPt2D& winMax)
+{
+	switch (edeg)
+	{
+	case Left:
+		if (p.x < winMin.x)return (false);
+		break;
+	case Right:
+		if (p.x > winMax.x)return (false);
+		break;
+	case Bottom:
+		if (p.y < winMin.y)return (false);
+		break;
+	case Top:
+		if (p.y > winMax.y)return (false);
+		break;
+	}
+	return (true);
+}
+
+//是否穿过边界
+GLint cross(wcPt2D& p1, wcPt2D& p2, Boundary edeg, wcPt2D& winMin, wcPt2D& winMax)
+{
+	if (inside(p1, edeg, winMin, winMax) == inside(p2, edeg, winMin, winMax))
+		return false;
+	else 
+		return true;
+}
+
+//获取边界交点
+wcPt2D intersect(wcPt2D& p1, wcPt2D& p2, Boundary edeg, wcPt2D& winMin, wcPt2D& winMax)
+{
+	wcPt2D iPt;
+	GLfloat m;
+
+	if (p1.x != p2.x) m = (p2.y - p1.y) / (p2.x - p1.x);
+	switch (edeg)
+	{
+	case Left:
+		iPt.x = winMin.x;
+		iPt.y = p2.y + (winMin.x - p2.x) * m;
+		break;
+	case Right:
+		iPt.x = winMax.x;
+		iPt.y = p2.y + (winMax.x - p2.x) * m;
+		break;
+	case Bottom:
+		iPt.y = winMin.y;
+		if (p1.x != p2.x) iPt.x = p2.x + (winMin.y - p2.y) / m;
+		else iPt.x = p2.x;
+		break;
+	case Top:
+		iPt.y = winMax.y;
+		if (p1.x != p2.x)iPt.x = p2.x + (winMax.y - p2.y) / m;
+		else iPt.x = p2.x;
+		break;
+	default:
+		break;
+	}
+	return iPt;
+}
+
+void clipPoint(wcPt2D& p, Boundary edeg, wcPt2D& winMin, wcPt2D& winMax, wcPt2D* pOut, int* cnt, wcPt2D* first[], wcPt2D* last)
+{
+	wcPt2D iPt;
+	if (!first[edeg])
+		first[edeg] = &p;
+	else
+	{
+		if (cross(p, last[edeg], edeg, winMin, winMax))//与边界相交
+		{
+			iPt = intersect(p, last[edeg], edeg, winMin, winMax);
+			if (edeg < Top)
+				clipPoint(iPt, Boundary(edeg + 1), winMin, winMax, pOut, cnt, first, last);
+			else
+			{
+				pOut[*cnt] = iPt;
+				(*cnt)++;
+			}
+		}
+	}
+
+	last[edeg] = p;
+
+	if (inside(p, edeg, winMin, winMax))//边界以内的点
+	{
+		if (edeg < Top)
+			clipPoint(p, Boundary(edeg + 1), winMin, winMax, pOut, cnt, first, last);
+		else
+		{
+			pOut[*cnt] = p;
+			(*cnt)++;
+		}
+	}
+}
+
+void closeClip(wcPt2D& winMin, wcPt2D& winMax, wcPt2D* pOut, GLint* cnt, wcPt2D* first[], wcPt2D* last)
+{
+	wcPt2D pt;
+	int edge;
+	for (edge = Left; edge <= Top; ++edge)
+	{
+		if (cross(last[edge], *first[edge], Boundary(edge), winMin, winMax))
+		{
+			pt = intersect(last[edge], *first[edge], Boundary(edge), winMin, winMax);
+			if (edge < Top)
+				clipPoint(pt, Boundary(edge+1), winMin, winMax, pOut, cnt, first, last);
+			else
+			{
+				pOut[*cnt] = pt;
+				(*cnt)++;
+			}
+		}
+	}
+}
+
+GLint polygonClipSuthHodg(wcPt2D& winMin, wcPt2D& winMax, GLint n, wcPt2D* pIn, wcPt2D* pOut)
+{
+	wcPt2D* first[nClip] = { 0, 0, 0, 0 };
+	wcPt2D last[nClip];
+	GLint k, cnt = 0;
+
+	for (k = 0; k < n; ++k)
+		clipPoint(pIn[k], Left, winMin, winMax, pOut, &cnt, first, last);
+
+	wcPt2D pt;
+	for (k = 0; k < nClip; ++k)
+	{
+		pt.setCoords(first[k]->x, first[k]->y);
+		cout << "first [" << k << "]" << " Point x: " << pt.x << endl;
+	}
+	closeClip(winMin, winMax, pOut, &cnt, first, last);
+	return cnt;
+}
+
+void testPolygonClip()
+{
+	wcPt2D winMin, winMax;
+	winMin.x = 0; winMin.y = 0;
+	winMax.x = 100; winMax.y = 100;
+	lineDDA(0, 0, 100, 0);
+	lineDDA(100, 0, 100, 100);
+	lineDDA(0, 100, 100, 100);
+	lineDDA(0, 0, 0, 100);
+
+	GLint nVerts = 3;
+	wcPt2D p1, p2, p3;
+	p1.setCoords(-25.0, 10.0);
+	p2.setCoords(125.0, 10.0);
+	p3.setCoords(50.0, 125.0);
+	wcPt2D verts[3] = { p1, p2, p3};
+
+	wcPt2D p4, p5, p6, p7, p8, p9, p10;
+	wcPt2D outVerts[7] = { p4, p5, p6, p7, p8, p9, p10 };
+
+	GLint outCnt = polygonClipSuthHodg(winMin, winMax, nVerts, verts, outVerts) - 1;
+	triangle(outVerts, outCnt);
+}
+
 #pragma endregion
 
 void drawFunc(void)
@@ -818,16 +1007,8 @@ void drawFunc(void)
 	//circleMidPoint(200, 200, 100);
 	//ellipseMidPoint(200, 200, 100, 50);
 	//midPointGravity(200, 800, 40, 40);
-
-	wcPt2D winMin;
-	winMin.x = 0; winMin.y = 0;
-	wcPt2D winMax;
-	winMax.x = 100; winMax.y = 100;
-
-	wcPt2D p1, p2;
-	p1.x = -50; p1.y = -50;
-	p2.x = 120, p2.y = 120;
-	lineClipCohSuth(winMin, winMax, p1, p2);
+	//testLineClip();
+	testPolygonClip();
 
 	glFlush();
 }
@@ -854,8 +1035,12 @@ void inputDisplayFunc(void)
 
 void matrixDisplayFunc()
 {
+	wcPt2D p1, p2, p3;
+	p1.setCoords(-50.0, -50.0);
+	p2.setCoords(-150.0, -50.0);
+	p3.setCoords(-100.0, 50.0);
+	wcPt2D verts[3] = { p1, p2, p3 };
 	GLint nVerts = 3;
-	wcPt2D verts[3] = { {-50.0, -50.0}, {-150.0, -50.0}, {-100.0, 50.0} };
 
 	wcPt2D centriodPt;
 
@@ -880,7 +1065,7 @@ void matrixDisplayFunc()
 
 	glClear(GL_COLOR_BUFFER_BIT);
 	glColor3f(0.0f, 0.0f, 1.0f);//设定显示对象的颜色
-	triangle(verts);
+	triangle(verts, nVerts);
 
 	matrix3x3SetIdentity(matComposite);
 	scale2D(sx, sy, fixedPt);
@@ -890,7 +1075,7 @@ void matrixDisplayFunc()
 	transformVerts2D(nVerts, verts);
 
 	glColor3f(1.0, .0, .0);
-	triangle(verts);
+	triangle(verts, nVerts);
 
 	glFlush();
 }
