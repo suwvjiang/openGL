@@ -17,17 +17,17 @@ const double TWO_PI = 6.2831853;
 const double PI = 3.1415926;
 
 GLsizei winWidth = 600, winHeight = 500;
-GLint xRaster = 25, yRaster = 100;
+int xRaster = 25, yRaster = 100;
 GLubyte label[36] = { 'J', 'a', 'n',		'F', 'e', 'b',		'M', 'a', 'r',
 					  'A', 'p', 'r',		'M', 'a', 'y',		'J', 'u', 'n',
 					  'J', 'u', 'l',		'A', 'u', 'g',		'S', 'e', 'p',
 					  'O', 'c', 't',		'N', 'o', 'v',		'D', 'e', 'c',
 };
 
-GLint dataValue[12] = { 420, 342, 324, 310, 262, 185, 190, 196, 217, 240, 312, 438 };
+int dataValue[12] = { 420, 342, 324, 310, 262, 185, 190, 196, 217, 240, 312, 438 };
 
-GLfloat xwcMin = 0.0, xwcMax = 225.0;
-GLfloat ywcMin = 0.0, ywcMax = 225.0;
+float xwcMin = 0.0, xwcMax = 225.0;
+float ywcMin = 0.0, ywcMax = 225.0;
 
 class screePt
 {
@@ -71,22 +71,22 @@ public:
 class wcPt2D
 {	
 public:
-	GLfloat x, y;
+	float x, y;
 	wcPt2D() { x = y = 0.0; }
-	void setCoords(GLfloat vx, GLfloat vy) { x = vx; y = vy; }
+	void setCoords(float vx, float vy) { x = vx; y = vy; }
 	~wcPt2D() { /*cout << "destroy wcpt2D'x:" << x << " y:" << y << endl;*/ }
 	//wcPt2D(wcPt2D&& value) { x = value.x; y = value.y; }
 };
 
-typedef GLfloat Matrix3x3[3][3];
+typedef float Matrix3x3[3][3];
 Matrix3x3 matComposite;
 
 class wcPt3D
 {
 public:
-	GLfloat x, y, z;
+	float x, y, z;
 	wcPt3D() { x = y = z = 0; }
-	void setCoords(GLfloat xCoord, GLfloat yCoord, GLfloat zCoord)
+	void setCoords(float xCoord, float yCoord, float zCoord)
 	{
 		x = xCoord;
 		y = yCoord;
@@ -94,7 +94,7 @@ public:
 	}
 };
 
-typedef GLfloat Matrix4x4[4][4];
+typedef float Matrix4x4[4][4];
 
 inline int roundPlus(const float a) { return int(a + 0.5f); }
 
@@ -102,19 +102,6 @@ void setPixel(GLint x, GLint y)
 {
 	glBegin(GL_POINTS);
 	glVertex2i(x, y);
-	glEnd();
-}
-
-void triangle(wcPt2D* verts, GLint nVerts)
-{
-	GLint k;
-
-	glPolygonMode(GL_FRONT, GL_FILL);
-	glBegin(GL_POLYGON);
-	for (k = 0; k < nVerts; ++k)
-	{
-		glVertex2f(verts[k].x, verts[k].y);
-	}
 	glEnd();
 }
 
@@ -130,7 +117,7 @@ void swapPts(wcPt2D* p1, wcPt2D* p2)
 //
 void matrix3x3SetIdentity(Matrix3x3& matIdent3x3)
 {
-	GLint row, col;
+	int row, col;
 	for (row = 0; row < 3; ++row)
 	{
 		for (col = 0; col < 3; ++col)
@@ -142,7 +129,7 @@ void matrix3x3SetIdentity(Matrix3x3& matIdent3x3)
 
 void matrix3x3PreMultiply(Matrix3x3& m1, Matrix3x3& m2)
 {
-	GLint row, col;
+	int row, col;
 	Matrix3x3 matTemp;
 	for (row = 0; row<3;++row)
 	{
@@ -161,7 +148,7 @@ void matrix3x3PreMultiply(Matrix3x3& m1, Matrix3x3& m2)
 	}
 }
 
-void translate2D(GLfloat tx, GLfloat ty)
+void translate2D(float tx, float ty)
 {
 	Matrix3x3 matTrans;
 	matrix3x3SetIdentity(matTrans);
@@ -172,7 +159,7 @@ void translate2D(GLfloat tx, GLfloat ty)
 	matrix3x3PreMultiply(matTrans, matComposite);
 }
 
-void rotate2D(wcPt2D& pivotPt, GLfloat theta)
+void rotate2D(wcPt2D& pivotPt, float theta)
 {
 	Matrix3x3 matRot;
 	matrix3x3SetIdentity(matRot);
@@ -188,7 +175,7 @@ void rotate2D(wcPt2D& pivotPt, GLfloat theta)
 	matrix3x3PreMultiply(matRot, matComposite);
 }
 
-void scale2D(GLfloat sx, GLfloat sy, wcPt2D& fixedPt)
+void scale2D(float sx, float sy, wcPt2D& fixedPt)
 {
 	Matrix3x3 matScale;
 	matrix3x3SetIdentity(matScale);
@@ -202,10 +189,10 @@ void scale2D(GLfloat sx, GLfloat sy, wcPt2D& fixedPt)
 	matrix3x3PreMultiply(matScale, matComposite);
 }
 
-void transformVerts2D(GLint nVerts, wcPt2D* verts)
+void transformVerts2D(int nVerts, wcPt2D* verts)
 {
-	GLint k;
-	GLfloat temp;
+	int k;
+	float temp;
 
 	for (k = 0; k < nVerts; ++k)
 	{
@@ -219,7 +206,7 @@ void transformVerts2D(GLint nVerts, wcPt2D* verts)
 
 #pragma region Matrix4x4
 Matrix4x4 matComposite3D;
-void matrix4x4Setidentity(Matrix4x4& matIdentity)
+void matrix4x4SetIdentity(Matrix4x4& matIdentity)
 {
 	GLint row, col;
 	for (row = 0; row < 4; ++row)
@@ -252,7 +239,7 @@ void matrix4x4PreMultiply(Matrix4x4& m1, Matrix4x4& m2)
 void translate3D(GLfloat tx, GLfloat ty, GLfloat tz)
 {
 	Matrix4x4 matTrans3D;
-	matrix4x4Setidentity(matTrans3D);
+	matrix4x4SetIdentity(matTrans3D);
 
 	matTrans3D[0][3] = tx;
 	matTrans3D[1][3] = ty;
@@ -276,7 +263,7 @@ void rotate3D(wcPt3D p1, wcPt3D p2, GLfloat radianAngle)
 	GLfloat uz = (p2.z - p1.z) / axisVectLen;
 
 	translate3D(-p1.x, -p1.y, -p1.z);
-	matrix4x4Setidentity(matQuaternionRot);
+	matrix4x4SetIdentity(matQuaternionRot);
 	matQuaternionRot[0][0] = ux * ux * oneC + cosA;
 	matQuaternionRot[0][1] = ux * uy * oneC - uz * sinA;
 	matQuaternionRot[0][2] = ux * uz * oneC + uy * sinA;
@@ -295,7 +282,7 @@ void rotate3D(wcPt3D p1, wcPt3D p2, GLfloat radianAngle)
 void scale3D(GLfloat sx, GLfloat sy, GLfloat sz, wcPt3D fixedPt)
 {
 	Matrix4x4 matScale3D;
-	matrix4x4Setidentity(matScale3D);
+	matrix4x4SetIdentity(matScale3D);
 
 	matScale3D[0][0] = sx;
 	matScale3D[0][3] = (1 - sx) * fixedPt.x;
@@ -306,16 +293,55 @@ void scale3D(GLfloat sx, GLfloat sy, GLfloat sz, wcPt3D fixedPt)
 
 	matrix4x4PreMultiply(matScale3D, matComposite3D);
 }
+
+void transformVerts3D(GLint nVerts, wcPt3D* verts)
+{
+	GLint k;
+	for (k = 0; k < nVerts; ++k)
+	{
+		GLfloat tempX = verts[k].x * matComposite3D[0][0] + verts[k].y * matComposite3D[0][1] + verts[k].z * matComposite3D[0][2] + matComposite3D[0][3];
+		GLfloat tempY = verts[k].x * matComposite3D[1][0] + verts[k].y * matComposite3D[1][1] + verts[k].z * matComposite3D[1][2] + matComposite3D[1][3];
+		verts[k].z = verts[k].x * matComposite3D[2][0] + verts[k].y * matComposite3D[2][1] + verts[k].z * matComposite3D[2][2] + matComposite3D[2][3];
+		verts[k].y = tempY;
+		verts[k].x = tempX;
+	}
+}
+
 #pragma endregion
 
-
-#pragma region Draw Sampler
+#pragma region OpenGL Draw Sampler
 
 void lineSegment(screePt p1, screePt p2)
 {
 	glBegin(GL_LINES);
 	glVertex2i(p1.getX(), p1.getY());
 	glVertex2i(p2.getX(), p2.getY());
+	glEnd();
+}
+
+void triangle2D(wcPt2D* verts, GLint nVerts)
+{
+	GLint k;
+
+	glPolygonMode(GL_FRONT, GL_FILL);
+	glBegin(GL_POLYGON);
+	for (k = 0; k < nVerts; ++k)
+	{
+		glVertex2f(verts[k].x, verts[k].y);
+	}
+	glEnd();
+}
+
+void triangle3D(wcPt3D* verts, GLint nVerts)
+{
+	GLint k;
+
+	glPolygonMode(GL_FRONT, GL_FILL);
+	glBegin(GL_POLYGON);
+	for (k = 0; k < nVerts; ++k)
+	{
+		glVertex3f(verts[k].x, verts[k].y, 0);//Ê≠§Â§ÑÂÖà‰∏çÁÆ°ZÂÄº
+	}
 	glEnd();
 }
 
@@ -343,10 +369,10 @@ void cube()
 
 void cubeElements()
 {
-	glEnableClientState(GL_VERTEX_ARRAY);//º§ªÓ∂•µ„ ˝◊È
-	glVertexPointer(3, GL_INT, 0, pt);//…Ë÷√∂•µ„◊¯±ÍµƒŒª÷√∫Õ∏Ò Ω
+	glEnableClientState(GL_VERTEX_ARRAY);//ÊøÄÊ¥ªÈ°∂ÁÇπÊï∞ÁªÑ
+	glVertexPointer(3, GL_INT, 0, pt);//ËÆæÁΩÆÈ°∂ÁÇπÂùêÊ†áÁöÑ‰ΩçÁΩÆÂíåÊ†ºÂºè
 
-	GLubyte vertexIndex[] = { 6, 2, 3, 7, 5, 1, 0, 4, 7, 3, 1, 5, 4, 0, 2, 6, 2, 0, 1, 3, 7, 5, 4, 6 };//…Ë÷√∂•µ„À˜“˝
+	GLubyte vertexIndex[] = { 6, 2, 3, 7, 5, 1, 0, 4, 7, 3, 1, 5, 4, 0, 2, 6, 2, 0, 1, 3, 7, 5, 4, 6 };//ËÆæÁΩÆÈ°∂ÁÇπÁ¥¢Âºï
 	glDrawElements(GL_QUADS, 24, GL_UNSIGNED_BYTE, vertexIndex);
 }
 
@@ -438,15 +464,15 @@ typedef enum
 	spiral,
 } curveNames;
 
-GLuint drawCurve(GLint curveNum)
+GLuint drawCurve(int curveNum)
 {
 	GLuint regHex = glGenLists(1);
 	glNewList(regHex, GL_COMPILE);
 
-	const GLint a = 175, b = 60;
+	const int a = 175, b = 60;
 
-	GLfloat r, theta, dtheta = 1.0 / (float)(a);
-	GLint x0 = 200, y0 = 250;
+	float r, theta, dtheta = 1.0 / (float)(a);
+	int x0 = 200, y0 = 250;
 
 	screePt curvePt[2];
 
@@ -514,8 +540,8 @@ void initDrawList()
 
 void drawColorTriangles()
 {
-	glShadeModel(GL_SMOOTH);//GL_SMOOTH-∆Ωª¨≤Â÷µ£¨GL_FLAT-µ•…´ÃÓ≥‰
-	glPolygonMode(GL_FRONT, GL_FILL);//GL_LINE-œ‘ æ±ﬂøÚ£¨GL_POINT-œ‘ æ∂•µ„£¨GL_FILL-ƒ¨»œÃÓ≥‰œ‘ æ
+	glShadeModel(GL_SMOOTH);//GL_SMOOTH-Âπ≥ÊªëÊèíÂÄºÔºåGL_FLAT-ÂçïËâ≤Â°´ÂÖÖ
+	glPolygonMode(GL_FRONT, GL_FILL);//GL_LINE-ÊòæÁ§∫ËæπÊ°ÜÔºåGL_POINT-ÊòæÁ§∫È°∂ÁÇπÔºåGL_FILL-ÈªòËÆ§Â°´ÂÖÖÊòæÁ§∫
 	glEnable(GL_LINE_SMOOTH);
 
 	glBegin(GL_TRIANGLES);
@@ -528,10 +554,13 @@ void drawColorTriangles()
 	glEnd();
 }
 
+#pragma endregion
+
+#pragma region Raster
 void lineDDA(int x0, int y0, int xEnd, int yEnd)
 {
-	int dx = xEnd - x0;
-	int dy = yEnd - y0;
+	float dx = xEnd - x0;
+	float dy = yEnd - y0;
 	int steps, k;
 
 	float xIncrement, yIncrement, x = x0, y = y0;
@@ -617,8 +646,8 @@ void lineBres(int x0, int y0, int xEnd, int yEnd)
 	}
 }
 
-//÷–µ„∑®ª≠‘≤
-void circlePlotPoints(GLint x, GLint y, screePt point)
+//‰∏≠ÁÇπÊ≥ïÁîªÂúÜ
+void circlePlotPoints(int x, int y, screePt point)
 {
 	setPixel(x + point.getX(), y + point.getY());
 	setPixel(x + point.getX(), y - point.getY());
@@ -629,10 +658,10 @@ void circlePlotPoints(GLint x, GLint y, screePt point)
 	setPixel(x - point.getY(), y + point.getX());
 	setPixel(x - point.getY(), y - point.getX());
 }
-void circleMidPoint(GLint x, GLint y, GLint radius)
+void circleMidPoint(int x, int y, GLint radius)
 {
 	screePt circPt;
-	GLint p = 1 - radius;
+	int p = 1 - radius;
 	circPt.setCoords(0, radius);
 	circlePlotPoints(x, y, circPt);
 
@@ -654,15 +683,15 @@ void circleMidPoint(GLint x, GLint y, GLint radius)
 	}
 }
 
-//÷–µ„ª≠Õ÷‘≤
-void ellipsePlotPoints(GLint xCenter, GLint yCenter, GLint x, GLint y)
+//‰∏≠ÁÇπÁîªÊ§≠ÂúÜ
+void ellipsePlotPoints(int xCenter, int yCenter, int x, int y)
 {
 	setPixel(xCenter + x, yCenter + y);
 	setPixel(xCenter + x, yCenter - y);
 	setPixel(xCenter - x, yCenter + y);
 	setPixel(xCenter - x, yCenter - y);
 }
-void ellipseMidPoint(GLint xCenter, GLint yCenter, GLint xRadius, GLint yRadius)
+void ellipseMidPoint(int xCenter, int yCenter, int xRadius, int yRadius)
 {
 	const int Rx2 = xRadius * xRadius;
 	const int Ry2 = yRadius * yRadius;
@@ -714,8 +743,8 @@ void ellipseMidPoint(GLint xCenter, GLint yCenter, GLint xRadius, GLint yRadius)
 	}
 }
 
-//÷–µ„≈◊ŒÔœﬂ
-void midPointGravity(GLint vx0, GLint vy0, GLint x0, GLint y0)
+//‰∏≠ÁÇπÊäõÁâ©Á∫ø
+void midPointGravity(int vx0, int vy0, int x0, int y0)
 {
 	const int gravity = 980;
 	const int vxy = vx0 * vy0;
@@ -767,6 +796,96 @@ void midPointGravity(GLint vx0, GLint vy0, GLint x0, GLint y0)
 	}
 }
 
+//ÁªòÂà∂‰∏ãÂπ≥Â∫ï‰∏âËßíÂΩ¢
+void drawBottomFlatTrangle(int x0, int y0, int x1, int y1, int x2, int y2)
+{
+	if (y0 != y1)
+	{
+		cout << "this trangle is not bottom flat" << endl;
+		return;
+	}
+
+	float deltax = x2 - x0;
+	float deltay = y2 - y0;
+	float deltaL = deltax / deltay;
+	deltax = x2 - x1;
+	deltay = y2 - y1;
+	float deltaR = deltax / deltay;
+	int k;
+
+	for (k = y0; k < y2; ++k)
+	{
+		int xl = roundPlus((k - y0) * deltaL + x0);
+		int xr = roundPlus((k - y1) * deltaR + x1);
+		lineBres(xl, k, xr, k);
+	}
+}
+//ÁªòÂà∂‰∏äÂπ≥Â∫ï‰∏âËßíÂΩ¢
+void drawTopFlatTrangle(int x0, int y0, int x1, int y1, int x2, int y2)
+{
+	if (y0 != y1)
+	{
+		cout << "this trangle is not top flat" << endl;
+		return;
+	}
+
+	float deltax = x2 - x0;
+	float deltay = y2 - y0;
+	float deltaL = deltax / deltay;
+	deltax = x2 - x1;
+	deltay = y2 - y1;
+	float deltaR = deltax / deltay;
+	int k;
+
+	for (k = y2; k < y0; ++k)
+	{
+		int xl = roundPlus((k - y0) * deltaL + x0);
+		int xr = roundPlus((k - y1) * deltaR + x1);
+		lineBres(xl, k, xr, k);
+	}
+}
+//ÁªòÂà∂‰ªªÊÑè‰∏âËßíÂΩ¢
+void drawTrangle(int x0, int y0, int x1, int y1, int x2, int y2)
+{
+	//todo y2>y0>y1
+	if (y0 < y1)
+	{
+		swap(y1, y0);
+		swap(x1, x0);
+	}
+	if (y2 < y1)
+	{
+		swap(y2, y1);
+		swap(x2, x1);
+	}
+	if (y2 < y0)
+	{
+		swap(y2, y0);
+		swap(x2, x0);
+	}
+
+	if (y0 == y1)//‰∏ãÂπ≥Â∫ï
+		drawBottomFlatTrangle(x0, y0, x1, y1, x2, y2);
+	else if (y0 == y2)//‰∏äÂπ≥Â∫ï
+		drawTopFlatTrangle(x0, y0, x2, y2, x1, y1);
+	else
+	{
+		float deltaX = x2 - x1;
+		float dletaY = y2 - y1;
+		float delta = deltaX / dletaY;
+		int xAdd = roundPlus((y0 - y1) * delta + x1);
+		int yAdd = y0;
+		if (xAdd < x0)
+		{
+			swap(xAdd, x0);
+			swap(yAdd, y0);
+		}
+
+		drawBottomFlatTrangle(x0, y0, xAdd, yAdd, x2, y2);
+		drawTopFlatTrangle(x0, y0, xAdd, yAdd, x1, y1);
+	}
+}
+
 #pragma endregion
 
 #pragma region 2D Clip
@@ -779,14 +898,14 @@ void drawClipWin(const wcPt2D& winMin, const wcPt2D& winMax)
 	lineBres(winMin.x, winMax.y, winMax.x, winMax.y);
 }
 
-const GLint winLeftBitCode = 0x1;
-const GLint winRightBitCode = 0x2;
-const GLint winBottomBitCode = 0x4;
-const GLint winTopBitCode = 0x8;
+const int winLeftBitCode = 0x1;
+const int winRightBitCode = 0x2;
+const int winBottomBitCode = 0x4;
+const int winTopBitCode = 0x8;
 
-inline GLint inside(GLint code) { return GLint(!code); }//»°∑¥
-inline GLint reject(GLint code1, GLint code2) { return GLint(code1 & code2); }//«“
-inline GLint accept(GLint code1, GLint code2) { return GLint(!(code1 | code2)); }
+inline int inside(int code) { return int(!code); }//ÂèñÂèç
+inline int reject(int code1, int code2) { return int(code1 & code2); }//‰∏î
+inline int accept(int code1, int code2) { return int(!(code1 | code2)); }
 
 GLubyte encode(wcPt2D& pt, wcPt2D& winMin, wcPt2D& winMax)
 {
@@ -813,9 +932,9 @@ void swapCodes(GLubyte* c1, GLubyte* c2)
 void lineClipCohSuth(wcPt2D& winMin, wcPt2D& winMax, wcPt2D& p1, wcPt2D& p2)
 {
 	GLubyte code1, code2;
-	GLint done = false, plotLine = false;
+	int done = false, plotLine = false;
 
-	GLfloat m;
+	float m;
 
 	while (!done)
 	{
@@ -829,7 +948,7 @@ void lineClipCohSuth(wcPt2D& winMin, wcPt2D& winMax, wcPt2D& p1, wcPt2D& p2)
 		}
 		else
 		{
-			if (reject(code1, code2))//Õ¨≤‡Ãﬁ≥˝
+			if (reject(code1, code2))//Âêå‰æßÂâîÈô§
 			{
 				done = true;
 			}
@@ -880,12 +999,12 @@ void lineClipCohSuth(wcPt2D& winMin, wcPt2D& winMax, wcPt2D& p1, wcPt2D& p2)
 		lineBres(roundPlus(p1.x), roundPlus(p1.y), roundPlus(p2.x), roundPlus(p2.y));
 }
 
-GLint clipTest(GLfloat p, GLfloat q, GLfloat* uIn, GLfloat* uOut)
+int clipTest(float p, float q, float* uIn, float* uOut)
 {
-	GLfloat r;
-	GLint returnValue = true;
+	float r;
+	int returnValue = true;
 
-	if (p < .0)//»Î±ﬂ»°◊Ó¥Û÷µ
+	if (p < .0)//ÂÖ•ËæπÂèñÊúÄÂ§ßÂÄº
 	{
 		r = q / p;
 		if (r > *uOut)
@@ -898,7 +1017,7 @@ GLint clipTest(GLfloat p, GLfloat q, GLfloat* uIn, GLfloat* uOut)
 	}
 	else
 	{
-		if (p > .0)//≥ˆ±ﬂ»°◊Ó–°÷µ
+		if (p > .0)//Âá∫ËæπÂèñÊúÄÂ∞èÂÄº
 		{
 			r = q / p;
 			if (r < *uIn)
@@ -909,7 +1028,7 @@ GLint clipTest(GLfloat p, GLfloat q, GLfloat* uIn, GLfloat* uOut)
 					*uOut = r;
 			}
 		}
-		else//”Î±ﬂΩÁ∆Ωµ»
+		else//‰∏éËæπÁïåÂπ≥Ë°å
 			if (q < .0)
 				returnValue = false;
 	}
@@ -918,7 +1037,7 @@ GLint clipTest(GLfloat p, GLfloat q, GLfloat* uIn, GLfloat* uOut)
 
 void lineClipLiangBarsk(wcPt2D& winMin, wcPt2D& winMax, wcPt2D& p1, wcPt2D& p2)
 {
-	GLfloat uIn = 0, uOut = 1, dx = p2.x - p1.x, dy;
+	float uIn = 0, uOut = 1, dx = p2.x - p1.x, dy;
 	if (clipTest(-dx, p1.x - winMin.x, &uIn, &uOut))
 	{
 		if (clipTest(dx, winMax.x - p1.x, &uIn, &uOut))
@@ -960,10 +1079,10 @@ typedef enum Boundary
 	Bottom,
 	Top,
 };
-const GLint nClip = 4;
+const int nClip = 4;
 
-// «∑Ò‘⁄±ﬂΩÁ«¯”Úƒ⁄
-GLint inside(wcPt2D& p, Boundary edeg, wcPt2D& winMin, wcPt2D& winMax)
+//ÊòØÂê¶Âú®ËæπÁïåÂå∫ÂüüÂÜÖ
+int inside(wcPt2D& p, Boundary edeg, wcPt2D& winMin, wcPt2D& winMax)
 {
 	switch (edeg)
 	{
@@ -983,8 +1102,8 @@ GLint inside(wcPt2D& p, Boundary edeg, wcPt2D& winMin, wcPt2D& winMax)
 	return (true);
 }
 
-// «∑Ò¥©π˝±ﬂΩÁ
-GLint cross(wcPt2D& p1, wcPt2D& p2, Boundary edeg, wcPt2D& winMin, wcPt2D& winMax)
+//ÊòØÂê¶Á©øËøáËæπÁïå
+int cross(wcPt2D& p1, wcPt2D& p2, Boundary edeg, wcPt2D& winMin, wcPt2D& winMax)
 {
 	if (inside(p1, edeg, winMin, winMax) == inside(p2, edeg, winMin, winMax))
 		return false;
@@ -992,11 +1111,11 @@ GLint cross(wcPt2D& p1, wcPt2D& p2, Boundary edeg, wcPt2D& winMin, wcPt2D& winMa
 		return true;
 }
 
-//ªÒ»°±ﬂΩÁΩªµ„
+//Ëé∑ÂèñËæπÁïå‰∫§ÁÇπ
 wcPt2D intersect(wcPt2D& p1, wcPt2D& p2, Boundary edeg, wcPt2D& winMin, wcPt2D& winMax)
 {
 	wcPt2D iPt;
-	GLfloat m;
+	float m;
 
 	if (p1.x != p2.x) m = (p2.y - p1.y) / (p2.x - p1.x);
 	switch (edeg)
@@ -1035,7 +1154,7 @@ void clipPoint(wcPt2D& p, Boundary edeg, wcPt2D& winMin, wcPt2D& winMax, wcPt2D*
 	}
 	else
 	{
-		if (cross(p, last[edeg], edeg, winMin, winMax))//”Î±ﬂΩÁœ‡Ωª
+		if (cross(p, last[edeg], edeg, winMin, winMax))//‰∏éËæπÁïåÁõ∏‰∫§
 		{
 			iPt = intersect(p, last[edeg], edeg, winMin, winMax);
 			if (edeg < Top)
@@ -1050,7 +1169,7 @@ void clipPoint(wcPt2D& p, Boundary edeg, wcPt2D& winMin, wcPt2D& winMax, wcPt2D*
 
 	last[edeg] = p;
 
-	if (inside(p, edeg, winMin, winMax))//±ﬂΩÁ“‘ƒ⁄µƒµ„
+	if (inside(p, edeg, winMin, winMax))//ËæπÁïå‰ª•ÂÜÖÁöÑÁÇπ
 	{
 		if (edeg < Top)
 			clipPoint(p, Boundary(edeg + 1), winMin, winMax, pOut, cnt, first, last);
@@ -1082,11 +1201,11 @@ void closeClip(wcPt2D& winMin, wcPt2D& winMax, wcPt2D* pOut, GLint* cnt, wcPt2D*
 	}
 }
 
-GLint polygonClipSuthHodg(wcPt2D& winMin, wcPt2D& winMax, GLint n, wcPt2D* pIn, wcPt2D* pOut)
+int polygonClipSuthHodg(wcPt2D& winMin, wcPt2D& winMax, GLint n, wcPt2D* pIn, wcPt2D* pOut)
 {
 	wcPt2D* first[nClip] = { 0, 0, 0, 0 };
 	wcPt2D last[nClip];
-	GLint k, cnt = 0;
+	int k, cnt = 0;
 
 	for (k = 0; k < n; ++k)
 		clipPoint(pIn[k], Left, winMin, winMax, pOut, &cnt, first, last);
@@ -1102,7 +1221,7 @@ void testPolygonClip()
 	winMax.x = 100; winMax.y = 100; 
 	drawClipWin(winMin, winMax);
 
-	GLint nVerts = 3;
+	int nVerts = 3;
 	wcPt2D p1, p2, p3;
 	p1.setCoords(-25.0, 10.0);
 	p2.setCoords(125.0, 10.0);
@@ -1110,20 +1229,36 @@ void testPolygonClip()
 	wcPt2D verts[3] = { p1, p2, p3};
 
 	glColor3f(1.0f, 0.0f, 0.0f);
-	triangle(verts, nVerts);
+	triangle2D(verts, nVerts);
 
 	wcPt2D outVerts[6];
-	GLint outCnt = polygonClipSuthHodg(winMin, winMax, nVerts, verts, outVerts);
+	int outCnt = polygonClipSuthHodg(winMin, winMax, nVerts, verts, outVerts);
 	glColor3f(0.0f, 1.0f, 0.0f);
-	triangle(outVerts, outCnt);
+	triangle2D(outVerts, outCnt);
 }
 
 #pragma endregion
 
+#pragma region 3D View
+//ÊäïÂΩ±Áü©Èòµ
+void identityProjectModel(Matrix4x4& proMatrix, float fov, float aspect, float znear, float zfar)
+{
+	float cot = atan(fov*0.5);
+
+	proMatrix[0][0] = cot/aspect;
+	proMatrix[1][1] = cot;
+	proMatrix[2][2] = (znear + zfar)/(znear - zfar);
+	proMatrix[2][3] = -(2*znear*zfar)/(znear - zfar);
+	proMatrix[3][2] = -1;
+}
+
+#pragma endregion
+
+//opengl api draw
 void drawFunc(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT);
-	glColor3f(0.0f, 0.4f, 0.2f);//…Ë∂®œ‘ æ∂‘œÛµƒ—’…´
+	glColor3f(0.0f, 0.4f, 0.2f);//ËÆæÂÆöÊòæÁ§∫ÂØπË±°ÁöÑÈ¢úËâ≤
 
 	//lineSegment();
 	//cube();
@@ -1131,13 +1266,24 @@ void drawFunc(void)
 	//callList();
 	//lineGraph();
 	//barChart();
-	//drawColorTriangles();
+	drawColorTriangles();
+
+	glFlush();
+}
+
+// custom raster draw
+void rasterFunc()
+{
+	glClear(GL_COLOR_BUFFER_BIT);
+	glColor3f(0.0f, 0.4f, 0.2f);//ËÆæÂÆöÊòæÁ§∫ÂØπË±°ÁöÑÈ¢úËâ≤
+
+	drawTrangle(0, 50, 50, 100, 100, 0);
 	//lineBres(20, 10, 330, 218);
 	//circleMidPoint(200, 200, 100);
 	//ellipseMidPoint(200, 200, 100, 50);
 	//midPointGravity(200, 800, 40, 40);
 	//testLineClip();
-	testPolygonClip();
+	//testPolygonClip();
 
 	glFlush();
 }
@@ -1193,8 +1339,8 @@ void matrixDisplayFunc()
 	GLdouble theta = PI / 2.0;
 
 	glClear(GL_COLOR_BUFFER_BIT);
-	glColor3f(0.0f, 0.0f, 1.0f);//…Ë∂®œ‘ æ∂‘œÛµƒ—’…´
-	triangle(verts, nVerts);
+	glColor3f(0.0f, 0.0f, 1.0f);//ËÆæÂÆöÊòæÁ§∫ÂØπË±°ÁöÑÈ¢úËâ≤
+	triangle2D(verts, nVerts);
 
 	matrix3x3SetIdentity(matComposite);
 	scale2D(sx, sy, fixedPt);
@@ -1204,23 +1350,56 @@ void matrixDisplayFunc()
 	transformVerts2D(nVerts, verts);
 
 	glColor3f(1.0, .0, .0);
-	triangle(verts, nVerts);
+	triangle2D(verts, nVerts);
 
 	glFlush();
 }
 
 void matrixDisplay3DFunc()
 {
+	wcPt3D p1, p2, p3;
+	p1.setCoords(-150.0, -50.0, 0.0);
+	p2.setCoords(-50.0, -50.0, 0.0);
+	p3.setCoords(-100.0, 50.0, 0.0);
+	wcPt3D verts[3] = { p1, p2, p3 };
+	int nVerts = 3;
 
-	matrix4x4Setidentity(matComposite3D);
+	glClear(GL_COLOR_BUFFER_BIT);
+	glColor3f(0.0f, 0.0f, 1.0f);//ËÆæÂÆöÊòæÁ§∫ÂØπË±°ÁöÑÈ¢úËâ≤
+	triangle3D(verts, nVerts);
 
+	/*matrix4x4SetIdentity(matComposite3D);
+
+	//identity View Model
+	wcPt3D viewOrigin;
+	viewOrigin.setCoords(50.0, 50.0, 0.0);
+	wcPt3D viewLookAt;
+	viewLookAt.setCoords(50.0, 50.0, 50.0);
+
+	rotate3D(viewOrigin, viewLookAt, 0);
+	translate3D(viewOrigin.x, viewOrigin.y, viewOrigin.z);
+
+	//identity project model
+	GLfloat fov = (40/180)*PI;
+	GLfloat aspect = 1;
+	GLfloat zNear = -20;
+	GLfloat zFar = -50;
+
+	Matrix4x4 projectMatrix;
+	matrix4x4SetIdentity(projectMatrix);
+	identityProjectModel(projectMatrix, fov, aspect, zNear, zFar);
+
+	matrix4x4PreMultiply(projectMatrix, matComposite3D);
+	*/
+
+	glFlush();
 }
 
 void init(void)
 {
-	glClearColor(1.0f, 1.0f, 1.0f, 0.0f);//…Ë∂®±≥æ∞—’…´
+	glClearColor(1.0f, 1.0f, 1.0f, 0.0f);//ËÆæÂÆöËÉåÊôØÈ¢úËâ≤
 
-	glMatrixMode(GL_PROJECTION);//…Ë∂®Õ∂”∞ƒ£ Ω
+	glMatrixMode(GL_PROJECTION);//ËÆæÂÆöÊäïÂΩ±Ê®°Âºè
 	glLoadIdentity();
 	gluOrtho2D(-100.0, 100.0, -100.0, 100.0);
 }
@@ -1234,23 +1413,26 @@ void winReshapeFunc(int newWidth, int newHeight)
 	glClear(GL_COLOR_BUFFER_BIT);
 }
 
-int main(int argc, char** argv) {
-	glutInit(&argc, argv);//≥ı ºªØ
+int main(int argc, char** argv) 
+{
+	glutInit(&argc, argv);//ÂàùÂßãÂåñ
 
-	glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);//…Ë∂®¥∞ø⁄µƒª∫¥Ê∫Õ—’…´ƒ£–Õ, GLUT_RGB-—’…´±‡¬Î£¨GLUT_INDEX-—’…´±Ì
+	glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);//ËÆæÂÆöÁ™óÂè£ÁöÑÁºìÂ≠òÂíåÈ¢úËâ≤Ê®°Âûã, GLUT_RGB-È¢úËâ≤ÁºñÁ†ÅÔºåGLUT_INDEX-È¢úËâ≤Ë°®
 
-	glutInitWindowPosition(100, 100);//…Ë∂®¥∞ø⁄Œª÷√
+	glutInitWindowPosition(100, 100);//ËÆæÂÆöÁ™óÂè£‰ΩçÁΩÆ
 
-	glutInitWindowSize(400, 400);//…Ë∂®¥∞ø⁄¥Û–°
+	glutInitWindowSize(400, 400);//ËÆæÂÆöÁ™óÂè£Â§ßÂ∞è
 
-	glutCreateWindow("OpenGL Explore");//…Ë÷√¥∞ø⁄±ÍÃ‚
+	glutCreateWindow("OpenGL Explore");//ËÆæÁΩÆÁ™óÂè£Ê†áÈ¢ò
 
 	init();
 	initDrawList();
+	glutDisplayFunc(rasterFunc);
 	//glutDisplayFunc(drawFunc);
-	//glutDisplayFunc(inputDisplayFunc);//÷∏∂®œ‘ æƒ⁄»›
-	glutDisplayFunc(matrixDisplayFunc);//
-	glutReshapeFunc(winReshapeFunc);//œ‘ æ¥∞ø⁄÷ÿ∂®–Œ
+	//glutDisplayFunc(inputDisplayFunc);//ÊåáÂÆöÊòæÁ§∫ÂÜÖÂÆπ
+	//glutDisplayFunc(matrixDisplayFunc);
+	//glutDisplayFunc(matrixDisplay3DFunc);
+	glutReshapeFunc(winReshapeFunc);//ÊòæÁ§∫Á™óÂè£ÈáçÂÆöÂΩ¢
 	glutMainLoop();
 	return 0;
 }
