@@ -32,8 +32,8 @@ float ywcMin = 0.0, ywcMax = 225.0;
 class screePt
 {
 private:
-	GLint x;
-	GLint y;
+	int x;
+	int y;
 
 public:
 	screePt()
@@ -41,18 +41,18 @@ public:
 		x = y = 0;
 	}
 
-	void setCoords(GLint xValue, GLint yValue)
+	void setCoords(int xValue, int yValue)
 	{
 		x = xValue;
 		y = yValue;
 	}
 
-	GLint getX() const
+	int getX() const
 	{
 		return x;
 	}
 
-	GLint getY()const
+	int getY()const
 	{
 		return y;
 	}
@@ -208,7 +208,7 @@ void transformVerts2D(int nVerts, wcPt2D* verts)
 Matrix4x4 matComposite3D;
 void matrix4x4SetIdentity(Matrix4x4& matIdentity)
 {
-	GLint row, col;
+	int row, col;
 	for (row = 0; row < 4; ++row)
 		for (col = 0; col < 4; ++col)
 			matIdentity[row][col] = col == row;
@@ -216,7 +216,7 @@ void matrix4x4SetIdentity(Matrix4x4& matIdentity)
 
 void matrix4x4PreMultiply(Matrix4x4& m1, Matrix4x4& m2)
 {
-	GLint row, col;
+	int row, col;
 	Matrix4x4 matTemp;
 	for (row = 0; row < 4; ++row)
 	{
@@ -236,7 +236,7 @@ void matrix4x4PreMultiply(Matrix4x4& m1, Matrix4x4& m2)
 }
 
 //
-void translate3D(GLfloat tx, GLfloat ty, GLfloat tz)
+void translate3D(float tx, float ty, float tz)
 {
 	Matrix4x4 matTrans3D;
 	matrix4x4SetIdentity(matTrans3D);
@@ -249,18 +249,18 @@ void translate3D(GLfloat tx, GLfloat ty, GLfloat tz)
 }
 
 //
-void rotate3D(wcPt3D p1, wcPt3D p2, GLfloat radianAngle)
+void rotate3D(wcPt3D p1, wcPt3D p2, float radianAngle)
 {
 	Matrix4x4 matQuaternionRot;
-	GLfloat axisVectLen = sqrt((p2.x - p1.x) * (p2.x - p1.x) + (p2.y - p1.y) * (p2.y - p1.y) + (p2.z - p1.z) * (p2.z - p1.z));
+	float axisVectLen = sqrt((p2.x - p1.x) * (p2.x - p1.x) + (p2.y - p1.y) * (p2.y - p1.y) + (p2.z - p1.z) * (p2.z - p1.z));
 
-	GLfloat sinA = sin(radianAngle);
-	GLfloat cosA = cos(radianAngle);
-	GLfloat oneC = 1 - cosA;
+	float sinA = sin(radianAngle);
+	float cosA = cos(radianAngle);
+	float oneC = 1 - cosA;
 
-	GLfloat ux = (p2.x - p1.x) / axisVectLen;
-	GLfloat uy = (p2.y - p1.y) / axisVectLen;
-	GLfloat uz = (p2.z - p1.z) / axisVectLen;
+	float ux = (p2.x - p1.x) / axisVectLen;
+	float uy = (p2.y - p1.y) / axisVectLen;
+	float uz = (p2.z - p1.z) / axisVectLen;
 
 	translate3D(-p1.x, -p1.y, -p1.z);
 	matrix4x4SetIdentity(matQuaternionRot);
@@ -279,7 +279,7 @@ void rotate3D(wcPt3D p1, wcPt3D p2, GLfloat radianAngle)
 	translate3D(p1.x, p1.y, p1.z);
 }
 
-void scale3D(GLfloat sx, GLfloat sy, GLfloat sz, wcPt3D fixedPt)
+void scale3D(float sx, float sy, float sz, wcPt3D fixedPt)
 {
 	Matrix4x4 matScale3D;
 	matrix4x4SetIdentity(matScale3D);
@@ -294,13 +294,13 @@ void scale3D(GLfloat sx, GLfloat sy, GLfloat sz, wcPt3D fixedPt)
 	matrix4x4PreMultiply(matScale3D, matComposite3D);
 }
 
-void transformVerts3D(GLint nVerts, wcPt3D* verts)
+void transformVerts3D(int nVerts, wcPt3D* verts)
 {
-	GLint k;
+	int k;
 	for (k = 0; k < nVerts; ++k)
 	{
-		GLfloat tempX = verts[k].x * matComposite3D[0][0] + verts[k].y * matComposite3D[0][1] + verts[k].z * matComposite3D[0][2] + matComposite3D[0][3];
-		GLfloat tempY = verts[k].x * matComposite3D[1][0] + verts[k].y * matComposite3D[1][1] + verts[k].z * matComposite3D[1][2] + matComposite3D[1][3];
+		float tempX = verts[k].x * matComposite3D[0][0] + verts[k].y * matComposite3D[0][1] + verts[k].z * matComposite3D[0][2] + matComposite3D[0][3];
+		float tempY = verts[k].x * matComposite3D[1][0] + verts[k].y * matComposite3D[1][1] + verts[k].z * matComposite3D[1][2] + matComposite3D[1][3];
 		verts[k].z = verts[k].x * matComposite3D[2][0] + verts[k].y * matComposite3D[2][1] + verts[k].z * matComposite3D[2][2] + matComposite3D[2][3];
 		verts[k].y = tempY;
 		verts[k].x = tempX;
@@ -588,8 +588,13 @@ void lineDDA(int x0, int y0, int xEnd, int yEnd)
 
 void lineBres(int x0, int y0, int xEnd, int yEnd)
 {
-	int dx = abs(xEnd - x0);
-	int dy = abs(yEnd - y0);
+	if (xEnd < x0)
+		swap(xEnd, x0);
+	if (yEnd < y0)
+		swap(yEnd, y0);
+
+	int dx = xEnd - x0;
+	int dy = yEnd - y0;
 	int dx2 = dx + dx;
 	int dy2 = dy + dy;
 	int x, y;
@@ -886,6 +891,10 @@ void drawTrangle(int x0, int y0, int x1, int y1, int x2, int y2)
 	}
 }
 
+void drawTrangle(const screePt& p1, const screePt& p2, const screePt& p3)
+{
+	drawTrangle(p1.getX(), p1.getY(), p2.getX(), p2.getY(), p3.getX(), p3.getY());
+}
 #pragma endregion
 
 #pragma region 2D Clip
@@ -1240,18 +1249,42 @@ void testPolygonClip()
 #pragma endregion
 
 #pragma region 3D View
-//投影矩阵
-void identityProjectModel(Matrix4x4& proMatrix, float fov, float aspect, float znear, float zfar)
+//相机矩阵
+void generateCameraModel(Matrix4x4& cameraMatrix, wcPt3D origin, wcPt3D lookAt, wcPt3D upDir)
 {
+	matrix4x4SetIdentity(cameraMatrix);
+
+	cameraMatrix[0][3] = -origin.x;
+	cameraMatrix[1][3] = -origin.y;
+	cameraMatrix[2][3] = -origin.z;
+
+	cameraMatrix[2][2] = -1;
+}
+//投影矩阵
+void generateProjectModel(Matrix4x4& proMatrix, float fov, float aspect, float znear, float zfar)
+{
+	matrix4x4SetIdentity(proMatrix);
+
 	float cot = atan(fov*0.5);
 
 	proMatrix[0][0] = cot/aspect;
 	proMatrix[1][1] = cot;
 	proMatrix[2][2] = (znear + zfar)/(znear - zfar);
 	proMatrix[2][3] = -(2*znear*zfar)/(znear - zfar);
-	proMatrix[3][2] = -1;
+	proMatrix[3][2] = 1;
 }
+//投屏矩阵
+void generateScreenModel(Matrix4x4& screenMatrix, wcPt3D center, float width, float height)
+{
+	matrix4x4SetIdentity(screenMatrix);
 
+	screenMatrix[0][0] = width / 2;
+	screenMatrix[0][3] = -center.x * width / 2;
+	screenMatrix[1][1] = height / 2;
+	screenMatrix[1][3] = -center.y * height / 2;
+	screenMatrix[2][2] = 1;
+	screenMatrix[2][3] = center.z;
+}
 #pragma endregion
 
 //opengl api draw
@@ -1277,7 +1310,6 @@ void rasterFunc()
 	glClear(GL_COLOR_BUFFER_BIT);
 	glColor3f(0.0f, 0.4f, 0.2f);//设定显示对象的颜色
 
-	drawTrangle(0, 50, 50, 100, 100, 0);
 	//lineBres(20, 10, 330, 218);
 	//circleMidPoint(200, 200, 100);
 	//ellipseMidPoint(200, 200, 100, 50);
@@ -1285,10 +1317,16 @@ void rasterFunc()
 	//testLineClip();
 	//testPolygonClip();
 
+	screePt p1, p2, p3;
+	p1.setCoords(-100, 0);
+	p2.setCoords(0, 100);
+	p3.setCoords(100, -100);
+	drawTrangle(p1, p2, p3);
+
 	glFlush();
 }
 
-//
+//输入形绘制
 void inputDisplayFunc(void)
 {
 	GLuint curveNum;
@@ -1307,7 +1345,7 @@ void inputDisplayFunc(void)
 
 	glFlush();
 }
-
+//2d转换绘制
 void matrixDisplayFunc()
 {
 	wcPt2D p1, p2, p3;
@@ -1354,43 +1392,58 @@ void matrixDisplayFunc()
 
 	glFlush();
 }
-
+//3d转换绘制
 void matrixDisplay3DFunc()
 {
+	glClear(GL_COLOR_BUFFER_BIT);
+	glColor3f(0.1f, 0.1f, 0.1f);
+
+	lineBres(-400, 0, 400, 0);
+	lineBres(0, -300, 0, 300);
+
 	wcPt3D p1, p2, p3;
-	p1.setCoords(-150.0, -50.0, 0.0);
-	p2.setCoords(-50.0, -50.0, 0.0);
-	p3.setCoords(-100.0, 50.0, 0.0);
+	p1.setCoords(-200, 0.0, 0.0);
+	p2.setCoords(0.0, 100.0, 0.0);
+	p3.setCoords(-100.0, 200.0, 0.0);
 	wcPt3D verts[3] = { p1, p2, p3 };
 	int nVerts = 3;
 
-	glClear(GL_COLOR_BUFFER_BIT);
-	glColor3f(0.0f, 0.0f, 1.0f);//设定显示对象的颜色
+	glColor3f(0.0f, 0.0f, 1.0f);
 	triangle3D(verts, nVerts);
 
-	/*matrix4x4SetIdentity(matComposite3D);
+	matrix4x4SetIdentity(matComposite3D);
 
-	//identity View Model
+	//translate3D(0, 0, -10);
+
 	wcPt3D viewOrigin;
-	viewOrigin.setCoords(50.0, 50.0, 0.0);
 	wcPt3D viewLookAt;
-	viewLookAt.setCoords(50.0, 50.0, 50.0);
+	viewLookAt.setCoords(0, 50, 0.0);
+	rotate3D(viewOrigin, viewLookAt, PI);
 
-	rotate3D(viewOrigin, viewLookAt, 0);
-	translate3D(viewOrigin.x, viewOrigin.y, viewOrigin.z);
+	//identity Camera Matrix
+	wcPt3D cameraPos, cameraLookAt, cameraUpDir;
+	cameraPos.setCoords(200, 0, 0);
+	Matrix4x4 cameraMatrix;
+	generateCameraModel(cameraMatrix, cameraPos, cameraLookAt, cameraUpDir);
+	matrix4x4PreMultiply(cameraMatrix, matComposite3D);
 
-	//identity project model
-	GLfloat fov = (40/180)*PI;
-	GLfloat aspect = 1;
-	GLfloat zNear = -20;
-	GLfloat zFar = -50;
-
+	//identity Project Matrix
+	float fov = PI*1/9, aspect = 1;
+	float zNear = 0, zFar = -100;
 	Matrix4x4 projectMatrix;
-	matrix4x4SetIdentity(projectMatrix);
-	identityProjectModel(projectMatrix, fov, aspect, zNear, zFar);
-
+	generateProjectModel(projectMatrix, fov, aspect, zNear, zFar);
 	matrix4x4PreMultiply(projectMatrix, matComposite3D);
-	*/
+
+	//identity Screen Matrix
+	wcPt3D screenCenter;
+	screenCenter.setCoords(0, 0, 0);
+	Matrix4x4 screenMatrix;
+	generateScreenModel(screenMatrix, screenCenter, 100, 100);
+	matrix4x4PreMultiply(screenMatrix, matComposite3D);
+
+	transformVerts3D(nVerts, verts);
+	glColor3f(1.0f, 0.0f, 0.0f);
+	triangle3D(verts, nVerts);
 
 	glFlush();
 }
@@ -1421,17 +1474,17 @@ int main(int argc, char** argv)
 
 	glutInitWindowPosition(100, 100);//设定窗口位置
 
-	glutInitWindowSize(400, 400);//设定窗口大小
+	glutInitWindowSize(800, 600);//设定窗口大小
 
-	glutCreateWindow("OpenGL Explore");//设置窗口标题
+	glutCreateWindow("Computer Graphic Explore");//设置窗口标题
 
 	init();
 	initDrawList();
-	glutDisplayFunc(rasterFunc);
+	//glutDisplayFunc(rasterFunc);
 	//glutDisplayFunc(drawFunc);
 	//glutDisplayFunc(inputDisplayFunc);//指定显示内容
 	//glutDisplayFunc(matrixDisplayFunc);
-	//glutDisplayFunc(matrixDisplay3DFunc);
+	glutDisplayFunc(matrixDisplay3DFunc);
 	glutReshapeFunc(winReshapeFunc);//显示窗口重定形
 	glutMainLoop();
 	return 0;
