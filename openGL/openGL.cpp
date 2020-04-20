@@ -84,13 +84,21 @@ Matrix3x3 matComposite;
 class wcPt3D
 {
 public:
-	float x, y, z;
-	wcPt3D() { x = y = z = 0; }
-	void setCoords(float xCoord, float yCoord, float zCoord)
+	float x, y, z, w;
+	wcPt3D() { x = y = z = w = 0; }
+	void setCoords(float xCoord, float yCoord, float zCoord, float wCoord = 1)
 	{
 		x = xCoord;
 		y = yCoord;
 		z = zCoord;
+		w = wCoord;
+	}
+
+	void homogeneous()
+	{
+		x = x / w;
+		y = y / w;
+		w = 1;
 	}
 };
 
@@ -249,7 +257,7 @@ void translate3D(float tx, float ty, float tz)
 }
 
 //
-void rotate3D(wcPt3D p1, wcPt3D p2, float radianAngle)
+void rotate3D(const wcPt3D& p1, const wcPt3D& p2, float radianAngle)
 {
 	Matrix4x4 matQuaternionRot;
 	float axisVectLen = sqrt((p2.x - p1.x) * (p2.x - p1.x) + (p2.y - p1.y) * (p2.y - p1.y) + (p2.z - p1.z) * (p2.z - p1.z));
@@ -279,7 +287,7 @@ void rotate3D(wcPt3D p1, wcPt3D p2, float radianAngle)
 	translate3D(p1.x, p1.y, p1.z);
 }
 
-void scale3D(float sx, float sy, float sz, wcPt3D fixedPt)
+void scale3D(float sx, float sy, float sz, const wcPt3D& fixedPt)
 {
 	Matrix4x4 matScale3D;
 	matrix4x4SetIdentity(matScale3D);
@@ -299,9 +307,11 @@ void transformVerts3D(int nVerts, wcPt3D* verts)
 	int k;
 	for (k = 0; k < nVerts; ++k)
 	{
-		float tempX = verts[k].x * matComposite3D[0][0] + verts[k].y * matComposite3D[0][1] + verts[k].z * matComposite3D[0][2] + matComposite3D[0][3];
-		float tempY = verts[k].x * matComposite3D[1][0] + verts[k].y * matComposite3D[1][1] + verts[k].z * matComposite3D[1][2] + matComposite3D[1][3];
-		verts[k].z = verts[k].x * matComposite3D[2][0] + verts[k].y * matComposite3D[2][1] + verts[k].z * matComposite3D[2][2] + matComposite3D[2][3];
+		float tempX = verts[k].x * matComposite3D[0][0] + verts[k].y * matComposite3D[0][1] + verts[k].z * matComposite3D[0][2] + verts[k].w * matComposite3D[0][3];
+		float tempY = verts[k].x * matComposite3D[1][0] + verts[k].y * matComposite3D[1][1] + verts[k].z * matComposite3D[1][2] + verts[k].w * matComposite3D[1][3];
+		float tempZ = verts[k].x * matComposite3D[2][0] + verts[k].y * matComposite3D[2][1] + verts[k].z * matComposite3D[2][2] + verts[k].w * matComposite3D[2][3];
+		verts[k].w = verts[k].x * matComposite3D[3][0] + verts[k].y * matComposite3D[3][1] + verts[k].z * matComposite3D[3][2] + verts[k].w * matComposite3D[3][3];
+		verts[k].z = tempZ;
 		verts[k].y = tempY;
 		verts[k].x = tempX;
 	}
@@ -895,6 +905,8 @@ void drawTrangle(const screePt& p1, const screePt& p2, const screePt& p3)
 {
 	drawTrangle(p1.getX(), p1.getY(), p2.getX(), p2.getY(), p3.getX(), p3.getY());
 }
+
+void drawPolygon(int nVerts, w)
 #pragma endregion
 
 #pragma region 2D Clip
@@ -1250,15 +1262,13 @@ void testPolygonClip()
 
 #pragma region 3D View
 //相机矩阵
-void generateCameraModel(Matrix4x4& cameraMatrix, wcPt3D origin, wcPt3D lookAt, wcPt3D upDir)
+void generateCameraModel(Matrix4x4& cameraMatrix, const wcPt3D& origin, const wcPt3D& lookAt, const wcPt3D& upDir)
 {
 	matrix4x4SetIdentity(cameraMatrix);
 
 	cameraMatrix[0][3] = -origin.x;
 	cameraMatrix[1][3] = -origin.y;
 	cameraMatrix[2][3] = -origin.z;
-
-	cameraMatrix[2][2] = -1;
 }
 //投影矩阵
 void generateProjectModel(Matrix4x4& proMatrix, float fov, float aspect, float znear, float zfar)
@@ -1272,18 +1282,19 @@ void generateProjectModel(Matrix4x4& proMatrix, float fov, float aspect, float z
 	proMatrix[2][2] = (znear + zfar)/(znear - zfar);
 	proMatrix[2][3] = -(2*znear*zfar)/(znear - zfar);
 	proMatrix[3][2] = 1;
+	proMatrix[3][3] = 0;
 }
 //投屏矩阵
-void generateScreenModel(Matrix4x4& screenMatrix, wcPt3D center, float width, float height)
+void generateScreenModel(Matrix4x4& screenMatrix, const wcPt3D& center, float width, float height)
 {
 	matrix4x4SetIdentity(screenMatrix);
 
 	screenMatrix[0][0] = width / 2;
-	screenMatrix[0][3] = -center.x * width / 2;
+	screenMatrix[0][3] = center.x;
 	screenMatrix[1][1] = height / 2;
-	screenMatrix[1][3] = -center.y * height / 2;
-	screenMatrix[2][2] = 1;
-	screenMatrix[2][3] = center.z;
+	screenMatrix[1][3] = center.y;
+	screenMatrix[2][2] = 0;
+	screenMatrix[3][3] = 0;
 }
 #pragma endregion
 
@@ -1393,6 +1404,7 @@ void matrixDisplayFunc()
 	glFlush();
 }
 //3d转换绘制
+float angle = 0;
 void matrixDisplay3DFunc()
 {
 	glClear(GL_COLOR_BUFFER_BIT);
@@ -1402,50 +1414,73 @@ void matrixDisplay3DFunc()
 	lineBres(0, -300, 0, 300);
 
 	wcPt3D p1, p2, p3;
-	p1.setCoords(-200, 0.0, 0.0);
-	p2.setCoords(0.0, 100.0, 0.0);
-	p3.setCoords(-100.0, 200.0, 0.0);
+	p1.setCoords(-50, 0.0, 50);
+	p2.setCoords(0.0, 25.0, 50);
+	p3.setCoords(-25.0, 50.0, 50);
 	wcPt3D verts[3] = { p1, p2, p3 };
 	int nVerts = 3;
 
 	glColor3f(0.0f, 0.0f, 1.0f);
 	triangle3D(verts, nVerts);
 
-	matrix4x4SetIdentity(matComposite3D);
-
-	//translate3D(0, 0, -10);
+	//translate3D(100, 0, 0);
 
 	wcPt3D viewOrigin;
+	viewOrigin.setCoords(0, 0, 50);
 	wcPt3D viewLookAt;
-	viewLookAt.setCoords(0, 50, 0.0);
-	rotate3D(viewOrigin, viewLookAt, PI);
+	viewLookAt.setCoords(0, 50, 50.0);
 
+	matrix4x4SetIdentity(matComposite3D);
+	rotate3D(viewOrigin, viewLookAt, angle);
+	transformVerts3D(nVerts, verts);
+	
 	//identity Camera Matrix
 	wcPt3D cameraPos, cameraLookAt, cameraUpDir;
-	cameraPos.setCoords(200, 0, 0);
+	cameraPos.setCoords(0, 0, -25);
 	Matrix4x4 cameraMatrix;
 	generateCameraModel(cameraMatrix, cameraPos, cameraLookAt, cameraUpDir);
-	matrix4x4PreMultiply(cameraMatrix, matComposite3D);
 
+	matrix4x4SetIdentity(matComposite3D);
+	matrix4x4PreMultiply(cameraMatrix, matComposite3D);
+	transformVerts3D(nVerts, verts);
+	
 	//identity Project Matrix
-	float fov = PI*1/9, aspect = 1;
-	float zNear = 0, zFar = -100;
+	float fov = PI*2/9, aspect = 1;
+	float zNear = 0, zFar = 100;
 	Matrix4x4 projectMatrix;
 	generateProjectModel(projectMatrix, fov, aspect, zNear, zFar);
+
+	matrix4x4SetIdentity(matComposite3D);
 	matrix4x4PreMultiply(projectMatrix, matComposite3D);
+	transformVerts3D(nVerts, verts);
+	
+	//homoneous transformation
+	int k;
+	for (k = 0; k < nVerts; ++k)
+	{
+		verts[k].homogeneous();
+	}
 
 	//identity Screen Matrix
 	wcPt3D screenCenter;
-	screenCenter.setCoords(0, 0, 0);
+	screenCenter.setCoords(200, 200, 0);
 	Matrix4x4 screenMatrix;
-	generateScreenModel(screenMatrix, screenCenter, 100, 100);
-	matrix4x4PreMultiply(screenMatrix, matComposite3D);
+	generateScreenModel(screenMatrix, screenCenter, 400, 400);
 
+	matrix4x4SetIdentity(matComposite3D);
+	matrix4x4PreMultiply(screenMatrix, matComposite3D);
 	transformVerts3D(nVerts, verts);
+	
 	glColor3f(1.0f, 0.0f, 0.0f);
 	triangle3D(verts, nVerts);
 
 	glFlush();
+}
+
+void idleAnimFunc()
+{
+	angle += PI/3600;
+	glutPostRedisplay();
 }
 
 void init(void)
@@ -1485,6 +1520,7 @@ int main(int argc, char** argv)
 	//glutDisplayFunc(inputDisplayFunc);//指定显示内容
 	//glutDisplayFunc(matrixDisplayFunc);
 	glutDisplayFunc(matrixDisplay3DFunc);
+	glutIdleFunc(idleAnimFunc);
 	glutReshapeFunc(winReshapeFunc);//显示窗口重定形
 	glutMainLoop();
 	return 0;
