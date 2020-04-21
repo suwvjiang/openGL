@@ -4,12 +4,14 @@
 #include <stdlib.h>
 #include <math.h>
 #include <Windows.h>
-//#include <GL/glew.h>
-#include <GL/glut.h>
-
 #include <iostream>
 
+#include <GL/glut.h>
+//#include <GL/glew.h>
+//#include "Eigen/Dense"
+
 using namespace std;
+//using namespace Eigen;
 
 //#pragma comment(lib, "glew32.lib")
 
@@ -105,6 +107,26 @@ public:
 typedef float Matrix4x4[4][4];
 
 inline int roundPlus(const float a) { return int(a + 0.5f); }
+inline float dotPlus(const wcPt3D& p1, const wcPt3D& p2){ return p1.x*p2.x+p1.y*p2.y+p1.z*p2.z; }
+inline wcPt3D crossPlus(const wcPt3D& p1, const wcPt3D& p2)
+{
+	wcPt3D pt;
+	pt.setCoords(p1.y*p2.z - p1.z*p2.y, p1.z*p2.x - p1.x*p2.z, p1.x*p2.y - p1.y*p2.x);
+	return pt;
+}
+inline wcPt3D dir(const wcPt3D& p1, const wcPt3D& p2)
+{
+	wcPt3D result;
+	result.setCoords(p2.x - p1.x, p2.y - p1.y, p2.z - p1.z);
+	return result;
+}
+inline void normalize(wcPt3D& pt)
+{
+	float len = sqrt(dotPlus(pt, pt));
+	pt.x/=len;
+	pt.y/=len;
+	pt.z/=len;
+}
 
 void setPixel(GLint x, GLint y)
 {
@@ -906,7 +928,6 @@ void drawTrangle(const screePt& p1, const screePt& p2, const screePt& p3)
 	drawTrangle(p1.getX(), p1.getY(), p2.getX(), p2.getY(), p3.getX(), p3.getY());
 }
 
-void drawPolygon(int nVerts, w)
 #pragma endregion
 
 #pragma region 2D Clip
@@ -1266,9 +1287,25 @@ void generateCameraModel(Matrix4x4& cameraMatrix, const wcPt3D& origin, const wc
 {
 	matrix4x4SetIdentity(cameraMatrix);
 
-	cameraMatrix[0][3] = -origin.x;
-	cameraMatrix[1][3] = -origin.y;
-	cameraMatrix[2][3] = -origin.z;
+	wcPt3D zDir = dir(origin, lookAt);
+	normalize(zDir);
+	wcPt3D xDir = crossPlus(upDir, zDir);
+	normalize(xDir);
+	wcPt3D yDir = crossPlus(zDir, xDir);
+	normalize(yDir);
+
+	cameraMatrix[0][0] = xDir.x;
+	cameraMatrix[0][1] = xDir.y;
+	cameraMatrix[0][2] = xDir.z;
+	cameraMatrix[0][3] = -dotPlus(origin, xDir);
+	cameraMatrix[1][0] = yDir.x;
+	cameraMatrix[1][1] = yDir.y;
+	cameraMatrix[1][2] = yDir.z;
+	cameraMatrix[1][3] = -dotPlus(origin, yDir);
+	cameraMatrix[2][0] = zDir.x;
+	cameraMatrix[2][1] = zDir.y;
+	cameraMatrix[2][2] = zDir.z;
+	cameraMatrix[2][3] = -dotPlus(origin, zDir);
 }
 //投影矩阵
 void generateProjectModel(Matrix4x4& proMatrix, float fov, float aspect, float znear, float zfar)
@@ -1279,8 +1316,8 @@ void generateProjectModel(Matrix4x4& proMatrix, float fov, float aspect, float z
 
 	proMatrix[0][0] = cot/aspect;
 	proMatrix[1][1] = cot;
-	proMatrix[2][2] = (znear + zfar)/(znear - zfar);
-	proMatrix[2][3] = -(2*znear*zfar)/(znear - zfar);
+	proMatrix[2][2] = 0;//(znear + zfar)/(znear - zfar);
+	proMatrix[2][3] = 0;//-(2*znear*zfar)/(znear - zfar);
 	proMatrix[3][2] = 1;
 	proMatrix[3][3] = 0;
 }
@@ -1290,9 +1327,9 @@ void generateScreenModel(Matrix4x4& screenMatrix, const wcPt3D& center, float wi
 	matrix4x4SetIdentity(screenMatrix);
 
 	screenMatrix[0][0] = width / 2;
-	screenMatrix[0][3] = center.x;
+	screenMatrix[0][3] = center.x*width / 2;
 	screenMatrix[1][1] = height / 2;
-	screenMatrix[1][3] = center.y;
+	screenMatrix[1][3] = center.y*height / 2;
 	screenMatrix[2][2] = 0;
 	screenMatrix[3][3] = 0;
 }
@@ -1413,30 +1450,32 @@ void matrixDisplay3DFunc()
 	lineBres(-400, 0, 400, 0);
 	lineBres(0, -300, 0, 300);
 
-	wcPt3D p1, p2, p3;
-	p1.setCoords(-50, 0.0, 50);
-	p2.setCoords(0.0, 25.0, 50);
-	p3.setCoords(-25.0, 50.0, 50);
-	wcPt3D verts[3] = { p1, p2, p3 };
 	int nVerts = 3;
+	wcPt3D p1, p2, p3;
+	p1.setCoords(-50, 0.0, 0);
+	p2.setCoords(0.0, 100.0, 0);
+	p3.setCoords(50.0, 50.0, 0);
+	wcPt3D verts[3] = { p1, p2, p3 };
 
-	glColor3f(0.0f, 0.0f, 1.0f);
-	triangle3D(verts, nVerts);
+	//glColor3f(0.0f, 0.0f, 1.0f);
+	//triangle3D(verts, nVerts);
 
 	//translate3D(100, 0, 0);
 
 	wcPt3D viewOrigin;
-	viewOrigin.setCoords(0, 0, 50);
+	viewOrigin.setCoords(0, 0, 0);
 	wcPt3D viewLookAt;
-	viewLookAt.setCoords(0, 50, 50.0);
+	viewLookAt.setCoords(0, 50, 0);
 
 	matrix4x4SetIdentity(matComposite3D);
-	rotate3D(viewOrigin, viewLookAt, angle);
+	rotate3D(viewOrigin, viewLookAt, PI);
 	transformVerts3D(nVerts, verts);
 	
 	//identity Camera Matrix
 	wcPt3D cameraPos, cameraLookAt, cameraUpDir;
-	cameraPos.setCoords(0, 0, -25);
+	cameraPos.setCoords(200*sin(angle), 0, 200*cos(angle));
+	cameraLookAt.setCoords(0, 0, 0);
+	cameraUpDir.setCoords(0, 1, 0);
 	Matrix4x4 cameraMatrix;
 	generateCameraModel(cameraMatrix, cameraPos, cameraLookAt, cameraUpDir);
 
@@ -1445,7 +1484,7 @@ void matrixDisplay3DFunc()
 	transformVerts3D(nVerts, verts);
 	
 	//identity Project Matrix
-	float fov = PI*2/9, aspect = 1;
+	float fov = PI*3/9, aspect = 1;
 	float zNear = 0, zFar = 100;
 	Matrix4x4 projectMatrix;
 	generateProjectModel(projectMatrix, fov, aspect, zNear, zFar);
@@ -1457,13 +1496,11 @@ void matrixDisplay3DFunc()
 	//homoneous transformation
 	int k;
 	for (k = 0; k < nVerts; ++k)
-	{
 		verts[k].homogeneous();
-	}
 
 	//identity Screen Matrix
 	wcPt3D screenCenter;
-	screenCenter.setCoords(200, 200, 0);
+	screenCenter.setCoords(0, 0, 0);
 	Matrix4x4 screenMatrix;
 	generateScreenModel(screenMatrix, screenCenter, 400, 400);
 
